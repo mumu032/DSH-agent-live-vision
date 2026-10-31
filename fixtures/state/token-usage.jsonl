@@ -1,0 +1,9 @@
+{"k":"turn","t":1793412300000,"sid":"demo","b":{"cacheMiss":18000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793412360000,"sid":"demo","b":{"cacheMiss":20000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793412420000,"sid":"demo","b":{"cacheMiss":22000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793430000000,"sid":"demo","b":{"cacheMiss":18000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793430060000,"sid":"demo","b":{"cacheMiss":20000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793430120000,"sid":"demo","b":{"cacheMiss":22000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793445000000,"sid":"demo","b":{"cacheMiss":18000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793445060000,"sid":"demo","b":{"cacheMiss":20000,"cacheHit":42000,"output":1200}}
+{"k":"turn","t":1793445120000,"sid":"demo","b":{"cacheMiss":22000,"cacheHit":42000,"output":1200}}

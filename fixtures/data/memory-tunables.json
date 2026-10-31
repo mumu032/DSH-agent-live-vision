@@ -1,0 +1,9 @@
+{
+  "keepCap": 60,
+  "diaryDays": 7,
+  "freshCap": 6,
+  "proactiveMinMin": 30,
+  "proactiveMaxMin": 90,
+  "proactiveP": 0.6,
+  "selfTimeTokensPerDay": 200000
+}

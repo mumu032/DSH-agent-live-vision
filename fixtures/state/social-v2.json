@@ -1,0 +1,87 @@
+{
+  "paused": false,
+  "conversations": {
+    "private:10000001": {
+      "wakeConfig": {
+        "mode": "active",
+        "infinite": true,
+        "triggers": {
+          "atMention": true,
+          "nameMention": true,
+          "question": true,
+          "poke": true,
+          "anyMessage": true,
+          "probability": 0.3
+        },
+        "lastWakeAt": 1793452500000,
+        "wakeCount": 12
+      },
+      "lastWakeReason": "explore",
+      "unread": [],
+      "lastIncomingAt": 1793454000000,
+      "lastAiReplyAt": 1793452800000,
+      "exploreSentAt": [
+        1793412300000,
+        1793430000000,
+        1793445000000
+      ],
+      "proactiveSentAt": []
+    },
+    "group:20000002": {
+      "wakeConfig": {
+        "mode": "diving",
+        "infinite": true,
+        "triggers": {
+          "atMention": true,
+          "nameMention": true,
+          "keywords": [
+            "小满",
+            "咖啡"
+          ],
+          "probability": 0.08
+        },
+        "lastWakeAt": 1793450400000,
+        "wakeCount": 3
+      },
+      "lastWakeReason": "probability",
+      "unread": [
+        {
+          "seq": 1,
+          "sender": "路人甲",
+          "text": "周末去爬山吗",
+          "time": "2026-10-31T13:30:00.000Z"
+        }
+      ],
+      "lastIncomingAt": 1793453400000,
+      "lastAiReplyAt": 0,
+      "exploreSentAt": [],
+      "proactiveSentAt": []
+    },
+    "group:20000003": {
+      "wakeConfig": {
+        "mode": "diving",
+        "infinite": true,
+        "triggers": {
+          "atMention": true,
+          "nameMention": true,
+          "speakerIds": [
+            "30001",
+            "30002",
+            "30003"
+          ],
+          "probability": 0.1
+        },
+        "lastWakeAt": 1793421000000,
+        "wakeCount": 5
+      },
+      "lastWakeReason": "proactiveCheck",
+      "unread": [],
+      "lastIncomingAt": 1793420400000,
+      "lastAiReplyAt": 1793421120000,
+      "exploreSentAt": [],
+      "proactiveSentAt": [
+        1793421000000
+      ]
+    }
+  }
+}

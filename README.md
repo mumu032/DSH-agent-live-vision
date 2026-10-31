@@ -1,0 +1,112 @@
+# Agent Live · 实时探测
+
+一个**只读**的实时面板：看你自己的 AI agent 此刻在做什么、今天去过哪些地方、什么时候醒过、花掉多少 token。
+
+它不接 API、不装 SDK、不改你的 agent —— 只是盯着一堆 JSONL 账本和一份日志文件，把里面新写进来的行变成一条不断往下走的流。
+
+- 零依赖，单个 `server.mjs` + 一个静态页，Node ≥ 18
+- 只读：不写任何账本，不调用你的 agent
+- SSE 推送，断线自动重连；手机打开也能用
+
+![桌面](screenshots/desktop.png)
+
+<details>
+<summary>手机上的样子</summary>
+
+![手机](screenshots/mobile.png)
+
+</details>
+
+---
+
+## 先看它长什么样（假数据，不碰你任何东西）
+
+```bash
+git clone <this-repo> agent-live && cd agent-live
+node server.mjs --demo
+# → http://127.0.0.1:3112
+```
+
+`--demo` 读的是 `fixtures/` 里那份编出来的账本（一个人设叫「小满」的 agent），所以上面那些截图也都是假数据。
+
+想重新生成一份假账本：`npm run fixtures`。
+
+---
+
+## 接自己的 agent
+
+```bash
+cp config.example.json config.json   # 然后改里面的路径
+node server.mjs                      # 默认 http://0.0.0.0:3110
+```
+
+`config.json`：
+
+```jsonc
+{
+  "root": "E:/your-agent",              // 账本根目录（下面要有 state/ 和 data/）
+  "bridgeLog": "D:/your-agent/out.log", // 可选：agent 的运行日志
+  "port": 3110,
+  "host": "0.0.0.0",                    // 手机要看就绑 0.0.0.0，只想本机就 127.0.0.1
+  "title": "Agent Live · 实时探测",
+  "agent": "小满",                       // 面板上显示的名字
+  "conversations": {                    // 会话 id → 你想看的名字
+    "private:10000001": "私聊·阿岚",
+    "group:20000002": "周末闲聊"
+  }
+}
+```
+
+也可以不给 `config.json`，用环境变量：`LIVE_CONFIG=/path/to/config.json`、`LIVE_PORT`、`LIVE_HOST`。
+
+### 它到底读哪些文件
+
+全部**按行追加**的文件，读到哪算哪（启动时读历史，之后每 700ms 追一次新行）：
+
+| 文件 | 用途 | 需要的字段 |
+| --- | --- | --- |
+| `state/tool-calls.jsonl` | 最主要的来源：一次工具调用一行 | `type`（`call`/`result`）、`time`、`key`、`tool`、`args`(JSON 字符串)、`ok`、`error` |
+| `state/self-time.jsonl` | 每次「自己的时间 / 出门」记一行 | `t`(毫秒)、`key` |
+| `state/social-v2.json` | 会话状态：谁在潜水、谁醒过、为什么醒 | `conversations.<key>.{wakeConfig, lastWakeReason, lastIncomingAt, unread, exploreSentAt}` |
+| `state/token-usage.jsonl` | token 花费 | `k`（只有 `turn` 计入）、`t`、`b.{cacheMiss, cacheHit, output}` |
+| `data/memory-tunables.json` | 可选：每天「自己的时间」的 token 预算 | `selfTimeTokensPerDay` |
+| `config.json`（root 下） | 可选：出门的概率与每日上限 | `socialV2.explore.{enabled, probability, maxPerDay}` |
+| `bridgeLog` | 可选：agent 的运行日志，补出「醒了一次 / 记忆图 / 天气 / 自学」这类系统事件 | 形如 `HH:MM:SS [bridge] [tag] 正文` |
+
+缺哪个文件都能跑，只是对应那块没数据。
+
+---
+
+## 面板上有什么
+
+**中间：实时流**
+
+- 按平台筛（B站 / 小黑盒 / 网易云 / QQ空间 / 画图 / 自学 / 她自己 / 待机）
+- 搜索（按 `/` 聚焦，Esc 清空）、时间范围（全部 / 今天 / 6 小时 / 1 小时）、只看失败
+- 10 分钟内同平台同动作的连续事件自动折叠成 `×N`，点一下摊开
+- 每一行点开看全文，带复制按钮
+- 往上翻就自动暂停（不会被新消息顶走），顶部出现「↑ N 条新的」，点它回到最新
+- 「收起记账」一键隐藏「记忆图 / 日子 / 群聊复盘」这类拼 prompt 的记账噪音
+
+**左栏**：她此刻在做什么 / 今天的预算条（出门几次、烧了多少 token、为什么现在不出门）/ 今日四宫格（出门、学到、日记、说说，点一下直接筛流）/ 会话卡（点开看唤醒条件、未读数、上次说话、上次醒来）
+
+**右栏**：她去过的平台（带近 24 小时次数与占比条，点一下筛流）/ 最近醒来（点开看「什么时候 / 为什么醒 / 那半小时干了 N 件事」，还能只看那半小时）
+
+**底部**：今天的心跳（24 根柱，点某根就筛那个小时）
+
+---
+
+## 一点设计说明
+
+- **为什么只读**：这东西是拿来看的，不是拿来控制的。写操作留给 agent 自己的通道，面板永远不碰账本。
+- **为什么要「折叠 + 收起记账」**：agent 每次醒来都会写一堆「记忆图召回 6 条」「日子注入 294 字」，这些是它拼 prompt 的过程，不是它做的事。默认全显示会把这些真动作淹掉。
+- **为什么平台名要配**：这些平台名（B站/小黑盒/网易云…）是原作者那个 agent 的工具集，你可以按自己的工具名改 `public/index.html` 里的 `VERB` / 平台映射表。
+
+## 隐私
+
+面板只读本地文件，不起外网请求（除了你自己浏览器连本机端口）。
+但你如果把 `config.json`、`state/`、`data/`、截图一起提交，就等于把 agent 的日记和行为记录公开了 —— 本仓库的 `.gitignore` 已经把这几样排除，提交前还是自己再看一眼。
+
+## License
+
+MIT

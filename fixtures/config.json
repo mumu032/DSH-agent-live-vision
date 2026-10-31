@@ -1,0 +1,20 @@
+{
+  "demo": true,
+  "title": "Agent Live · 实时探测",
+  "agent": "小满",
+  "conversations": {
+    "private:10000001": "私聊·阿岚",
+    "group:20000002": "周末闲聊",
+    "group:20000003": "一起学习"
+  },
+  "socialV2": {
+    "explore": {
+      "enabled": true,
+      "probability": 0.55,
+      "maxPerDay": 6
+    }
+  },
+  "weather": {
+    "refreshMin": 45
+  }
+}

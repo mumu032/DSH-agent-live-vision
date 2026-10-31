@@ -1,0 +1,15 @@
+# 你自己的配置和账本，不要提交（只有仓库根目录下的这两样被忽略，
+# fixtures/ 里那份假数据是要提交的，所以用 / 开头锚定）
+/config.json
+/state/
+/data/
+
+# 日志（demo 用的 fixtures/bridge.out.log 是假数据，单独放行）
+*.log
+!fixtures/bridge.out.log
+npm-debug.log*
+
+# 系统垃圾
+.DS_Store
+Thumbs.db
+node_modules/

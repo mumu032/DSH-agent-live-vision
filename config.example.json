@@ -1,0 +1,13 @@
+{
+  "root": "E:/your-agent",
+  "bridgeLog": "D:/your-agent/agent.out.log",
+  "port": 3110,
+  "host": "0.0.0.0",
+  "title": "Agent Live · 实时探测",
+  "agent": "小满",
+  "conversations": {
+    "private:10000001": "私聊·阿岚",
+    "group:20000002": "周末闲聊",
+    "group:20000003": "一起学习"
+  }
+}

@@ -1,0 +1,16 @@
+{
+  "name": "agent-live",
+  "version": "0.1.0",
+  "description": "A read-only live dashboard for what your AI agent is actually doing — built from its own JSONL ledgers.",
+  "type": "module",
+  "bin": { "agent-live": "./server.mjs" },
+  "scripts": {
+    "start": "node server.mjs",
+    "demo": "node server.mjs --demo",
+    "fixtures": "node fixtures/generate.mjs"
+  },
+  "engines": { "node": ">=18" },
+  "keywords": ["agent", "observability", "dashboard", "jsonl", "llm", "sse"],
+  "license": "MIT",
+  "files": ["server.mjs", "public/", "fixtures/", "config.example.json", "README.md", "LICENSE"]
+}
