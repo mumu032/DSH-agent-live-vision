@@ -126,7 +126,13 @@ MIT
 { "action": "install_bundle", "target": "github:<你的用户名>/agent-live" }
 ```
 
-它会把包装进当前 profile 并启用。装完**刷新一下 DSH 页面**，然后：
+它会把包装进当前 profile 并启用。
+
+> **如果这一步报 `ERR_PNPM_GIT_RESOLVE_FAILED` / 「git 不是内部或外部命令」**：说明跑 DSH 的那个进程 PATH 里没有 git（常见于只用命令行版 git、没装 Git for Windows 的机器）。这时换成 tarball 直链，一条照样能装：
+>
+> ```json
+> { "action": "install_bundle", "target": "https://github.com/<你的用户名>/agent-live/archive/refs/heads/main.tar.gz" }
+> ```装完**刷新一下 DSH 页面**，然后：
 
 - 侧边栏多一个雷达图标「实时探测」，点开就是整页；
 - 设置 → 实时探测 里也有一页（同一个页面）。
