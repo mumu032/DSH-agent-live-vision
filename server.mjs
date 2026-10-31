@@ -15,7 +15,10 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // 插件那半端会用 import('../server.mjs?demo=1') / ?config=<路径> 传参进来 ——
 // 走 URL query 而不是环境变量，免得把 DEMO 标志漏进宿主进程、连带污染它拉起的子进程。
 const SELF_Q = (() => { try { return new URL(import.meta.url).searchParams; } catch { return new URLSearchParams(); } })();
-const DEMO_FLAG = process.argv.includes('--demo') || process.env.AGENT_LIVE_DEMO === '1' || SELF_Q.get('demo') === '1';
+// 注意：宿主进程的环境变量是会被继承的（曾经在这里踩过坑：插件塞了 AGENT_LIVE_DEMO=1，
+// 结果连命令行跑的 node server.mjs 都变成了 demo 数据）。所以「显式给的 config」优先于环境里的 demo。
+const EXPLICIT_CONFIG = SELF_Q.get('config') || process.env.LIVE_CONFIG || process.argv.find((x) => x.startsWith('--config=')) || '';
+const DEMO_FLAG = process.argv.includes('--demo') || SELF_Q.get('demo') === '1' || (!EXPLICIT_CONFIG && process.env.AGENT_LIVE_DEMO === '1');
 function loadConfig() {
   const file = process.env.LIVE_CONFIG
     || SELF_Q.get('config')

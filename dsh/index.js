@@ -40,9 +40,14 @@ export async function apply(ctx) {
 
   // 配置必须在 import 之前定好：server.mjs 是模块级单例，载入时就把账本路径算死了。
   // 用 URL query 传，不动 process.env —— 宿主 env 会被它拉起的每个子进程继承，改了很难收场。
+  // ESM 是按 URL 缓存的。把 server.mjs 的 mtime 拼进 query：改了代码重装一次就能拿到
+  // 新模块，不用为了插件重启整个 DSH。
+  const stamp = (() => {
+    try { return String(Math.floor(statSync(new URL('../server.mjs', import.meta.url)).mtimeMs)) } catch { return '0' }
+  })()
   const spec = file
-    ? '../server.mjs?config=' + encodeURIComponent(file)
-    : '../server.mjs?demo=1'
+    ? '../server.mjs?config=' + encodeURIComponent(file) + '&b=' + stamp
+    : '../server.mjs?demo=1&b=' + stamp
   const live = await import(spec)
   live.startEngine()
 
