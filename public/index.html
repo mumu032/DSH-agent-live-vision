@@ -20,6 +20,9 @@
     --warn:#f59e0b; --bad:#ef4444; --good:#22c55e;
     --r:16px;
   }
+  /* 让浏览器自己那套控件（滚动条、下拉、光标）也用暗色，
+     否则 Chromium 会给一条白色滚动条，和背景打架 */
+  html{color-scheme:dark}
   *{box-sizing:border-box}
   html,body{height:100%}
   body{
@@ -43,9 +46,14 @@
   }
   .mono{font-family:"JetBrains Mono",ui-monospace,"Cascadia Mono",Consolas,monospace;font-variant-numeric:tabular-nums;letter-spacing:-.2px}
   ::selection{background:#2563eb66}
-  body::-webkit-scrollbar{width:11px}
-  body::-webkit-scrollbar-thumb{background:#1e293b;border-radius:9px;border:3px solid transparent;background-clip:content-box}
-  body::-webkit-scrollbar-track{background:transparent}
+  /* 滚动条统一成暗的：Chromium 只认 -webkit- 那套，
+     Firefox 认 scrollbar-width/color，两边都写一份，别让白的跳出来 */
+  *{scrollbar-width:thin;scrollbar-color:#243349 transparent}
+  *::-webkit-scrollbar{width:10px;height:10px}
+  *::-webkit-scrollbar-track{background:transparent}
+  *::-webkit-scrollbar-thumb{background:#243349;border-radius:9px;border:2px solid transparent;background-clip:content-box}
+  *::-webkit-scrollbar-thumb:hover{background:#31506f;background-clip:content-box}
+  *::-webkit-scrollbar-corner{background:transparent}
 
   /* ---------- 顶栏 ---------- */
   header{
@@ -85,7 +93,7 @@
   @media (min-width:1251px) {
     .wrap { height: calc(100vh - 78px); grid-template-rows: minmax(0, 1fr); }
     .feed { min-height: 0; overflow: hidden; }
-    .rail { overflow-y: auto; overflow-x: hidden; scrollbar-width: thin; }
+    .rail { overflow-y: auto; overflow-x: hidden; }
     /* 左栏：会话卡把剩下的高度吃掉，宁可卡里留白，也不要在页面上留一块空地 */
     .rail:first-child > .card:last-child { flex: 1 0 auto; }
     .rail:last-child { overflow: hidden; }
