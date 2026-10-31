@@ -462,7 +462,7 @@
     <div class="card">
       <div class="now">
         <div class="who">
-          <img class="ava" id="ava" src="/img/表情包/01-打招呼.png" alt=""
+          <img class="ava" id="ava" data-src="/img/表情包/01-打招呼.png" alt=""
                onerror="this.style.visibility='hidden'">
           <div>
             <div class="nm" id="agentName">她</div>
@@ -1042,6 +1042,13 @@ function renderCur(){
   }
 }
 
+// 页面可能被挂在 / 下，也可能被 DSH 插件挂在 /api/agent-live/ 下。
+// 用「当前目录」算前缀，接口和静态图就都跟着走，不用改一行路由。
+const BASE = (() => { try { return new URL('.', location.href).pathname.replace(/\/$/, ''); } catch { return ''; } })();
+
+// 头像也按前缀取（插件下是 /api/agent-live/img/...）
+try { const a = document.getElementById('ava'); if (a && a.dataset.src) a.src = BASE + a.dataset.src; } catch {}
+
 function syncRange(){
   for(const b of $('range').querySelectorAll('button')) b.classList.toggle('on', b.dataset.r === S.range);
 }
@@ -1085,7 +1092,7 @@ $('list').addEventListener('scroll', ()=>{
 });
 
 // ---- 启动 ----
-fetch('/api/snapshot').then(r=>r.json()).then(d=>{
+fetch(BASE + '/api/snapshot').then(r=>r.json()).then(d=>{
   S.events = d.events||[]; meta = d.meta||meta;
   renderFilters(); renderFeed(); renderMeta(); renderNow();
 });
@@ -1093,7 +1100,7 @@ fetch('/api/snapshot').then(r=>r.json()).then(d=>{
 // ---- 实时 ----
 let es = null;
 function connect(){
-  es = new EventSource('/api/stream');
+  es = new EventSource(BASE + '/api/stream');
   es.onopen = ()=>{ $('banner').classList.remove('on'); };
   es.onmessage = (ev) => {
     let m; try{ m = JSON.parse(ev.data); }catch{ return; }
