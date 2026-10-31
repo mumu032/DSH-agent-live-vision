@@ -72,8 +72,18 @@
   header .spacer{flex:1}
   .hstat{display:flex;align-items:center;gap:7px;color:var(--dim);font-size:12.5px;
     padding:4px 10px;border-radius:99px;border:1px solid transparent;transition:.2s}
-  .hstat:hover{border-color:var(--line);background:#0d1526}
+  .hstat.click{cursor:pointer}
+  .hstat.click:hover{border-color:#2b4a6f;background:#0d1526;color:var(--txt)}
   .hstat b{color:var(--txt);font-size:13px;font-weight:600}
+  #tokPop{position:fixed;top:56px;right:96px;z-index:50;min-width:236px;padding:12px 14px 10px;
+    border:1px solid #24405f;border-radius:12px;background:#0b1424;box-shadow:0 18px 44px -18px #000;
+    color:var(--dim);font-size:12.5px;line-height:1.6}
+  #tokPop .tp-h{color:var(--txt);font-size:12.5px;font-weight:600;margin-bottom:6px}
+  #tokPop .tp-row{display:flex;justify-content:space-between;gap:16px}
+  #tokPop .tp-row b{color:var(--txt);font-weight:600}
+  #tokPop .tp-row.sum{margin-top:6px;padding-top:6px;border-top:1px solid var(--line)}
+  #tokPop .tp-note{margin-top:8px;color:var(--dim2);font-size:11px;line-height:1.5}
+  @media (max-width:640px){ #tokPop{right:12px;left:12px;min-width:0;top:52px} }
   #hClock{color:var(--txt);font-size:15px !important;font-weight:600;letter-spacing:.5px}
 
   /* 连接断了的横幅 */
@@ -450,10 +460,16 @@
   <div class="brand"><span class="dot" id="dot"></span><span id="brandName">Agent Live</span> · 实时探测 <small>只读 · 账本</small></div>
   <div class="spacer"></div>
   <div class="hstat" id="hQQ" title="QQ 连接状态（桥接 ↔ SnowLuma）"><span class="dot" id="hQQdot" style="width:7px;height:7px;margin-right:6px"></span><span id="hQQtxt">QQ 已连</span></div>
-  <div class="hstat" id="hToolWrap">近 24h 动了 <b class="mono" id="hTool">–</b></div>
-  <div class="hstat" id="hTokWrap">今日 token <b class="mono" id="hTok">–</b></div>
+  <div class="hstat click" id="hToolWrap" role="button" tabindex="0" title="点一下：清掉所有筛选，看全部">近 24h 动了 <b class="mono" id="hTool">–</b></div>
+  <div class="hstat click" id="hTokWrap" role="button" tabindex="0" title="点一下：今天这些 token 花在哪">今日 token <b class="mono" id="hTok">–</b></div>
   <div class="hstat mono" id="hClock" style="color:var(--txt);font-size:15px">--:--:--</div>
 </header>
+
+  <div id="tokPop" hidden>
+    <div class="tp-h">今天这些 token 怎么花的</div>
+    <div class="tp-rows" id="tokRows"></div>
+    <div class="tp-note">计费口径沿用桥接那套：新输入 + 输出 + 命中缓存×0.1</div>
+  </div>
 <div class="banner" id="banner">跟探测服务的连接断了，正在重连…（页面上的数字会停住不动）</div>
 
 <div class="wrap">
@@ -837,6 +853,7 @@ function renderMeta(){
     qt.textContent = q.online ? '数据源已连' : '数据源断开';
     qt.style.color = q.online ? '' : '#f87171';
   }
+  window.__lastMeta = m;   // 顶部弹层要用
   $('hTool').textContent = m.tool24 ?? 0;
   $('hTok').textContent = kfmt(Math.round(m.tokens?.billable||0));
   $('kvTool').textContent = m.tool24 ?? 0;
@@ -1131,6 +1148,61 @@ connect();
 setInterval(()=>{
   const d = new Date();
   $('hClock').textContent = hhmm(d.getTime());
+
+  // 顶部两枚可点的胶囊（2026-10-31 23:5x：之前只有 hover 高亮、点了没反应）
+  (function wireHeader(){
+    const pop = $('tokPop'), rows = $('tokRows');
+    const close = () => { pop.hidden = true; };
+    const kfmt2 = (n) => n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? Math.round(n/1e3)+'k' : String(Math.round(n));
+
+    const build = () => {
+      const tk = (window.__lastMeta && window.__lastMeta.tokens) || {};
+      const miss = Number(tk.miss)||0, hit = Number(tk.hit)||0, out = Number(tk.out)||0;
+      const rowsArr = [
+        ['今天跑了', (Number(tk.turns)||0) + ' 轮', false],
+        ['新输入（没命中缓存）', kfmt2(miss), false],
+        ['命中缓存（按 0.1 算）', kfmt2(hit), false],
+        ['她写出来的', kfmt2(out), false],
+        ['合计计费', kfmt2(miss + out + hit*0.1), true],
+      ];
+      rows.innerHTML = rowsArr.map(([a,b,sum]) => '<div class="tp-row' + (sum?' sum':'') + '"><span>' + a + '</span><b class="mono">' + b + '</b></div>').join('');
+    };
+
+    const place = () => {
+      // 挂在「今日 token」这枚胶囊正下方，别糊在右栏上
+      const r = tok.getBoundingClientRect();
+      pop.style.top = (r.bottom + 8) + 'px';
+      const w = pop.offsetWidth || 240;
+      pop.style.left = Math.max(8, Math.min(r.right - w, window.innerWidth - w - 8)) + 'px';
+      pop.style.right = 'auto';
+    };
+    const toggle = (e) => {
+      if (e) e.stopPropagation();
+      build();
+      const willOpen = pop.hidden;
+      pop.hidden = !willOpen;
+      if (willOpen) place();
+    };
+
+    const tool = $('hToolWrap');
+    tool.addEventListener('click', () => {
+      // 回到「全部」：清掉平台、小时、关键词、时间窗、只看失败
+      S.platform = 'all'; S.hour = null; S.q = ''; S.range = 'all'; S.onlyFail = false; S.win = null;
+      const qi = $('q'); if (qi) qi.value = '';
+      afterFilterChange(true);
+      renderMeta();
+    });
+    tool.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); tool.click(); } });
+
+    const tok = $('hTokWrap');
+    tok.addEventListener('click', toggle);
+    tok.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); toggle(e); } });
+
+    document.addEventListener('click', (e) => {
+      if (!pop.hidden && !pop.contains(e.target) && e.target !== tok && !tok.contains(e.target)) close();
+    });
+    document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
+  })();
   renderNow();
 }, 1000);
 </script>
