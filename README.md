@@ -160,3 +160,13 @@ MIT
 ### 卸掉
 
 设置 → 插件 → 找到 agent-live → 停用/卸载。它只读文件，不写任何东西，卸了也不会留下垃圾。
+
+### 改完代码想让它立刻生效
+
+把 `server.mjs` 或 `dsh/*` 改了以后，宿主那边不会热重载，做一次：
+
+1. 设�� → 插件 → 停用 agent-live（或者 `{"action":"remove_bundle","target":"agent-live"}`）
+2. 再装回来
+
+`dsh/index.js` 把 `server.mjs` 的 mtime 拼进了 import 的 query，所以重装就会载入新代码，**不用重启整个 DSH**。
+（客户端的 `dsh/client.js` 更简单：刷新一下页面就行。）
