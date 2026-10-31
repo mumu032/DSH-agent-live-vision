@@ -341,9 +341,14 @@ let seq = 0;
 const MAX = 900;
 const subs = new Set();
 const recentKeys = new Map(); // 去重：同工具同内容 5s 内只留一条
+function prettyDetail(s) {
+  if (!s) return s;
+  return String(s).replace(/(private|group):([A-Za-z0-9_-]+)/g, (m, kind, id) => convName(kind + ':' + id) || m);
+}
 function push(ev) {
   if (isQQComms(ev)) return; // 不看 QQ，连记账都不记
   if (isHiddenEvent(ev)) return; // 唤醒这类不进流（见 HIDDEN_ACTIONS）
+  if (ev.detail) ev.detail = prettyDetail(ev.detail);
   const dupKey = `${ev.kind}|${ev.platform}|${ev.action}|${ev.detail}`;
   const now = ev.t || Date.now();
   const last = recentKeys.get(dupKey);
@@ -767,6 +772,7 @@ function bootHistory() {
           }
         }
         if (isQQComms(ev) || isHiddenEvent(ev)) { pend.pop(); continue; } // QQ 那摊事、唤醒这类都不记
+        ev.detail = prettyDetail(ev.detail);
         events.push(ev);
         pend[pend.length - 1].ev = ev;
       } else if (r.type === 'result') {
@@ -814,7 +820,7 @@ function bootHistory() {
         if (m) {
           const ev = fn(m);
           // 回放历史时也要过同一道 QQ 过滤（否则重启后 QQ 那几条又爬回来）
-          if (ev && !isQQComms(ev) && !isHiddenEvent(ev)) events.push({ t, ...ev, id: ++seq });
+          if (ev && !isQQComms(ev) && !isHiddenEvent(ev)) events.push({ t, ...ev, id: ++seq, detail: prettyDetail(ev.detail) });
           break;
         }
       }
