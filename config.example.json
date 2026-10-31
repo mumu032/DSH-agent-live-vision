@@ -1,13 +1,23 @@
 {
-  "root": "E:/your-agent",
-  "bridgeLog": "D:/your-agent/agent.out.log",
+  "root": "E:/dsh/qq-bridge",
+  "bridgeLog": "D:/qq-bridge/bridge.out.log",
   "port": 3110,
-  "host": "0.0.0.0",
+  "host": "127.0.0.1",
   "title": "Agent Live · 实时探测",
-  "agent": "小满",
+  "agent": "她",
   "conversations": {
     "private:10000001": "私聊·阿岚",
     "group:20000002": "周末闲聊",
     "group:20000003": "一起学习"
+  },
+  "socialV2": {
+    "explore": {
+      "enabled": true,
+      "probability": 0.55,
+      "maxPerDay": 6
+    }
+  },
+  "weather": {
+    "refreshMin": 45
   }
 }

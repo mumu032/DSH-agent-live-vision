@@ -110,3 +110,53 @@ node server.mjs                      # 默认 http://0.0.0.0:3110
 ## License
 
 MIT
+
+## 在 DSH 里当插件用（推荐）
+
+这个仓库有两种用法，同一个包：
+
+1. **直接在 DSH 里装**（不用起任何服务，页面挂在 DSH 自己的 web server 上）
+2. **当独立小服务跑**：`node server.mjs`（下面「快速开始」那段）
+
+### 一条命令装进 DSH
+
+在 DSH 的设置 → 插件里添加，或者让会话里的 agent 调一次：
+
+```json
+{ "action": "install_bundle", "target": "github:<你的用户名>/agent-live" }
+```
+
+它会把包装进当前 profile 并启用。装完**刷新一下 DSH 页面**，然后：
+
+- 侧边栏多一个雷达图标「实时探测」，点开就是整页；
+- 设置 → 实时探测 里也有一页（同一个页面）。
+
+页面地址是 `/api/agent-live/`，和 DSH 同源，所以实时流的 EventSource 不用额外配置。
+
+### 它读哪份配置
+
+插件按这个顺序找配置，找到哪个用哪个：
+
+1. 环境变量 `LIVE_CONFIG` 指向的 json
+2. 包目录下的 `config.json`（你自己建的，`.gitignore` 已经把它排除了）
+3. 当前工作目录的 `config.json`
+4. `C:Users6995.dsh/agent-live.json`
+
+**一个都找不到就跑内置示例数据**（`fixtures/` 里那份假账本）—— 所以刚装完一定有东西看，不会是一片空白。
+把 `config.example.json` 复制成 `config.json`、把 `root` 指向你自己的 agent 工作目录（里面要有 `state/tool-calls.jsonl` 那些账本），再重启一次 DSH 就切到真实数据。
+
+### 配置字段
+
+| 字段 | 说明 |
+| --- | --- |
+| `root` | agent 的工作目录，读 `state/` 和 `data/` 下的账本 |
+| `bridgeLog` | 桥接日志路径（可选；没有就只显示账本里的事件） |
+| `conversations` | 会话 id → 想显示的名字，例如 `"private:10000001": "私聊·阿岚"` |
+| `socialV2.explore` | 主动出门的配额（跟被观测的系统一致，用来画那条预算条） |
+| `weather.refreshMin` | 天气刷新间隔（分钟） |
+| `title` / `agent` | 页面标题、头像下面那个名字 |
+| `port` / `host` | 只有独立跑的时候用 |
+
+### 卸掉
+
+设置 → 插件 → 找到 agent-live → 停用/卸载。它只读文件，不写任何东西，卸了也不会留下垃圾。

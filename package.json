@@ -3,14 +3,53 @@
   "version": "0.1.0",
   "description": "A read-only live dashboard for what your AI agent is actually doing — built from its own JSONL ledgers.",
   "type": "module",
-  "bin": { "agent-live": "./server.mjs" },
+  "bin": {
+    "agent-live": "./server.mjs"
+  },
   "scripts": {
     "start": "node server.mjs",
     "demo": "node server.mjs --demo",
     "fixtures": "node fixtures/generate.mjs"
   },
-  "engines": { "node": ">=18" },
-  "keywords": ["agent", "observability", "dashboard", "jsonl", "llm", "sse"],
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "dsh",
+    "dsh-plugin",
+    "observability",
+    "agent",
+    "activity"
+  ],
   "license": "MIT",
-  "files": ["server.mjs", "public/", "fixtures/", "config.example.json", "README.md", "LICENSE"]
+  "files": [
+    "dsh",
+    "public",
+    "fixtures",
+    "server.mjs",
+    "config.example.json",
+    "README.md",
+    "LICENSE",
+    "cordis.patch.yml"
+  ],
+  "main": "dsh/index.js",
+  "exports": {
+    ".": "./dsh/index.js",
+    "./client": "./dsh/client.js",
+    "./server": "./server.mjs",
+    "./package.json": "./package.json"
+  },
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    },
+    "client": {
+      "platform": "web",
+      "inject": [
+        "@deepseek-ai/dsh-client-runtime",
+        "@deepseek-ai/dsh-client-ui-settings",
+        "@deepseek-ai/dsh-client-ui-settings-plugins"
+      ]
+    }
+  }
 }

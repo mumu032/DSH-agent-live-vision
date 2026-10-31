@@ -12,9 +12,13 @@ const HERE = path.dirname(fileURLToPath(import.meta.url));
 // ---------- 配置 ----------
 // 优先级：环境变量 > 命令行 --config > 同目录 config.json > 内置默认值
 // demo 模式完全不碰你自己的账本，直接读 ./fixtures 里那份假数据。
-const DEMO_FLAG = process.argv.includes('--demo');
+// 插件那半端会用 import('../server.mjs?demo=1') / ?config=<路径> 传参进来 ——
+// 走 URL query 而不是环境变量，免得把 DEMO 标志漏进宿主进程、连带污染它拉起的子进程。
+const SELF_Q = (() => { try { return new URL(import.meta.url).searchParams; } catch { return new URLSearchParams(); } })();
+const DEMO_FLAG = process.argv.includes('--demo') || process.env.AGENT_LIVE_DEMO === '1' || SELF_Q.get('demo') === '1';
 function loadConfig() {
   const file = process.env.LIVE_CONFIG
+    || SELF_Q.get('config')
     || (process.argv.find((a) => a.startsWith('--config=')) || '').split('=')[1]
     || path.join(HERE, DEMO_FLAG ? path.join('fixtures', 'config.json') : 'config.json');
   let cfg = {};
@@ -709,7 +713,19 @@ function serveImg(req, res) {
     res.end(buf);
   });
 }
-const server = http.createServer((req, res) => {
+// DSH 插件会把整页挂在 window 自己的 webServer 下的一个前缀里（例如 /api/agent-live），
+// 所以这里把「路由」和「监听端口」分开：handleRequest 只认 req/res，谁挂都行。
+export async function handleRequest(req, res, prefix = '') {
+  if (prefix) {
+    const u = req.url || '/';
+    if (u === prefix) req.url = '/';
+    else if (u.startsWith(prefix + '/')) req.url = u.slice(prefix.length);
+    else if (u.startsWith(prefix)) req.url = u.slice(prefix.length) || '/';
+  }
+  return handle(req, res);
+}
+
+function handle(req, res) {
   const url = (req.url || '/').split('?')[0];
   if (url.startsWith('/img/')) return serveImg(req, res);
   if (url === '/' || url === '/index.html') {
@@ -742,7 +758,7 @@ const server = http.createServer((req, res) => {
     return;
   }
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('404');
-});
+}
 
 // ---------- 启动：先灌历史，再开轮询 ----------
 function bootHistory() {
@@ -831,11 +847,20 @@ function bootHistory() {
   while (events.length > MAX) events.shift();
 }
 
-bootHistory();
-setInterval(() => { callsTail.poll(); sysTail.poll(); selfTail.poll(); }, 700);
-setInterval(() => broadcast({ type: 'meta', meta: meta() }), 3000);
+let engineStarted = false;
+export function startEngine() {
+  if (engineStarted) return;
+  engineStarted = true;
+  bootHistory();
+  setInterval(() => { callsTail.poll(); sysTail.poll(); selfTail.poll(); }, 700);
+  setInterval(() => broadcast({ type: 'meta', meta: meta() }), 3000);
+}
 
-server.on('error', (e) => {
+// 独立跑：自己开端口（`node server.mjs`）。DSH 插件里不会调到这里。
+export function startStandalone() {
+  startEngine();
+  const server = http.createServer((req, res) => { handleRequest(req, res).catch(() => {}); });
+  server.on('error', (e) => {
   // 已经有一个在跑了就别报错刷屏：双击第二次、或开机自启和桌面快捷方式撞在一起时都会走到这里
   if (e && e.code === 'EADDRINUSE') { process.exit(0); }
   console.error('[live] 起不来:', e?.message ?? e);
@@ -852,4 +877,15 @@ server.listen(PORT, HOST, () => {
       }
     }
   } catch {}
-});
+  });
+  return server;
+}
+
+// 只有被直接执行时才自己监听端口；被插件 import 时什么都不做。
+const IS_MAIN = (() => {
+  try {
+    const argv1 = process.argv[1] ? path.resolve(process.argv[1]) : '';
+    return argv1 && argv1 === path.resolve(fileURLToPath(import.meta.url));
+  } catch { return false; }
+})();
+if (IS_MAIN) startStandalone();
