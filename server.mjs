@@ -499,9 +499,30 @@ const sysTail = new Tailer(BRIDGE_LOG, (line) => {
 });
 
 // ---------- 状态快照 ----------
+// —— 按 mtime + size 缓存的文件级结果（2026-11-01）——
+// 起因：meta() 每 3 秒跑一次，每次都整份读 token-usage.jsonl（9540 行 / 2.6MB / 单次 12.8ms），
+// 而且这个文件只增不减，耗时随天数线性涨。文件没变就没必要重算。
+const _cache = new Map();
+function cachedByFile(file, fn) {
+  try {
+    const st = fs.statSync(file);
+    const key = file + '|' + st.mtimeMs + '|' + st.size;
+    const hit = _cache.get(file);
+    if (hit && hit.key === key) return hit.value;
+    const value = fn();
+    _cache.set(file, { key, value });
+    return value;
+  } catch {
+    return fn();
+  }
+}
+
 function readJsonSafe(f) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); } catch { return null; } }
 function todayStart() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
 function tokensToday() {
+  return cachedByFile(F.tokens, tokensTodayRaw);
+}
+function tokensTodayRaw() {
   const day0 = todayStart();
   let miss = 0, out = 0, hit = 0, turns = 0, money = 0;
   const byModel = new Map();
@@ -571,7 +592,10 @@ function lastOutingAt() {
   } catch {}
   return t;
 }
-function tunables() { return readJsonSafe(path.join(ROOT, 'data', 'memory-tunables.json')) || {}; }
+function tunables() {
+  const f = path.join(ROOT, 'data', 'memory-tunables.json');
+  return cachedByFile(f, () => readJsonSafe(f) || {});
+}
 // 「自己的时间」今天烧了多少 token —— 口径和 bridge.js:13225 selfTimeSpentToday 完全一致：
 // 拿 self-time.jsonl 里每次出门的时刻开一个 20 分钟窗口，把窗口内每轮（turn）最贵那条加起来。
 function selfTimeSpentToday() {
@@ -612,7 +636,7 @@ function exploreGate() {
   const qs = Number(p.quietStartHour ?? 23);
   const qe = Number(p.quietEndHour ?? 8);
   const inQuiet = qs <= qe ? (hour >= qs && hour < qe) : (hour >= qs || hour < qe);
-  const social = readJsonSafe(F.social) || {};
+  const social = cachedByFile(F.social, () => readJsonSafe(F.social) || {});
   const sent = [];
   let nearestIdle = Number.POSITIVE_INFINITY;
   for (const [, v] of Object.entries(social.conversations || {})) {
