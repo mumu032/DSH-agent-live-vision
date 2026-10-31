@@ -643,7 +643,18 @@ function exploreGate() {
     probability: Number.isFinite(Number(ex.probability)) ? Number(ex.probability) : 0.45,
     maxPerDay,
     usedToday: Math.max(sentToday, ledgerToday),
-    used24: Math.max(sent.length, ledgerToday),
+    // 「近 24 小时」这个数只做展示，用账本里 24 小时内的出门记录，不受额度口径影响
+    used24: (() => {
+      const from = Date.now() - 24 * 3600 * 1000;
+      let n = 0;
+      try {
+        for (const l of fs.readFileSync(F.selftime, 'utf8').split(/\r?\n/)) {
+          if (!l.trim()) continue;
+          try { const e = JSON.parse(l); if (Number(e.t) >= from) n++; } catch {}
+        }
+      } catch {}
+      return n;
+    })(),
     inQuiet,
     quietStartHour: qs,
     quietEndHour: qe,
@@ -652,7 +663,7 @@ function exploreGate() {
     // 还要等多少毫秒才可能自己出门（额度用完 → 明天；否则看还差多久安静够）
     nextInMs: !ex.enabled || ex.enabled === false
       ? null
-      : (sent.length >= maxPerDay ? null
+      : (Math.max(sentToday, ledgerToday) >= maxPerDay ? null
         : (Number.isFinite(nearestIdle) ? nearestIdle : 0)),
     budget: (() => {
       const spent = selfTimeSpentToday();

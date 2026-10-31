@@ -588,6 +588,10 @@ const S = {
 let meta = {byPlatform:{},hourly:new Array(24).fill(0)};
 const connectedAt = Date.now();
 
+function idleWord(ms) {
+  if (!(ms > 0)) return '眼下就';
+  return '再安静 ' + dur(ms) + '就';
+}
 function dur(ms){
   if(ms==null) return '—';
   if(ms<=0) return '马上';
@@ -952,8 +956,8 @@ function renderMeta(){
   $('explainWhy').textContent = ex.enabled === false ? '「自己去各大平台玩」这个开关是关着的'
     : (ex.nextInMs == null ? '今天的出门额度用完了，等明天'
       : (ex.inQuiet
-        ? `现在是她的安静时段（${ex.quietStartHour}:00–${ex.quietEndHour}:00）：不主动找人说话，但自己出门只是概率降到 30%；再安静 ${dur(ex.nextInMs)}就够条件`
-        : `这会儿允许她自己出门（每次概率 ${Math.round((ex.probability||0)*100)}%）；再安静 ${dur(ex.nextInMs)}就够条件`));
+        ? `现在是她的安静时段（${ex.quietStartHour}:00–${ex.quietEndHour}:00）：不主动找人说话，但自己出门只是概率降到 30%；${idleWord(ex.nextInMs)}够条件`
+        : `这会儿允许她自己出门（每次概率 ${Math.round((ex.probability||0)*100)}%）；${idleWord(ex.nextInMs)}够条件`));
 
   renderToday();
   renderPlats();
