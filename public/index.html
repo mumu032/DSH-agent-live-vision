@@ -468,7 +468,6 @@
   <div id="tokPop" hidden>
     <div class="tp-h">今天这些 token 怎么花的</div>
     <div class="tp-rows" id="tokRows"></div>
-    <div class="tp-note">计费口径沿用桥接那套：新输入 + 输出 + 命中缓存×0.1</div>
   </div>
 <div class="banner" id="banner">跟探测服务的连接断了，正在重连…（页面上的数字会停住不动）</div>
 
@@ -1173,9 +1172,6 @@ function wireHeaderOnce(){
       if (Number.isFinite(money)) {
         const zero = !(Number(tk.turns) > 0);
         html += '<div class="tp-row sum"><span>今天折合人民币</span><b class="mono">' + (zero ? '还没花' : sym + money.toFixed(2)) + '</b></div>';
-        html += '<div class="tp-note">' + (Number(tk.cost.models && tk.cost.models.length) > 1
-          ? '分模型：' + tk.cost.models.map((m) => (m.label || m.model) + ' ' + sym + m.cost.toFixed(2)).join('、')
-          : '按官方价目表算（高峰时段单价翻倍）') + '</div>';
       } else {
         html += '<div class="tp-row sum"><span>合计计费</span><b class="mono">' + kfmt2(miss + out + hit*0.1) + '</b></div>';
       }
