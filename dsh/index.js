@@ -11,6 +11,7 @@
  * ============================================================================
  */
 import fs from 'node:fs'
+import os from 'node:os'
 import path from 'node:path'
 import { fileURLToPath } from 'node:url'
 
@@ -21,18 +22,35 @@ const HERE = path.dirname(fileURLToPath(import.meta.url))
 const PKG = path.dirname(HERE)
 const PREFIX = '/api/agent-live'
 
-function findConfig() {
-  const env = process.env.LIVE_CONFIG
-  if (env && fs.existsSync(env)) return env
-  const candidates = [
+const CONFIG_NAME = 'agent-live.json'
+const DSH_HOMES = [
+  process.env.DSH_HOME,
+  path.join(os.homedir(), '.dsh'),
+  process.env.USERPROFILE ? path.join(process.env.USERPROFILE, '.dsh') : '',
+  process.env.HOME ? path.join(process.env.HOME, '.dsh') : '',
+].filter(Boolean)
+
+export function configCandidates() {
+  const list = [
+    process.env.LIVE_CONFIG,
     path.join(PKG, 'config.json'),
     path.join(process.cwd(), 'config.json'),
-    path.join(process.env.DSH_HOME || '', 'agent-live.json'),
   ]
-  for (const c of candidates) {
-    if (c && fs.existsSync(c)) return c
+  for (const home of DSH_HOMES) list.push(path.join(home, CONFIG_NAME))
+  // 同一个目录可能从 DSH_HOME 与 USERPROFILE 各算一次，去重后更好读
+  return [...new Set(list.filter(Boolean))]
+}
+
+export function findConfig() {
+  for (const c of configCandidates()) {
+    try { if (fs.existsSync(c)) return c } catch {}
   }
   return ''
+}
+
+/** 排障用：把这几个候选路径原样吐出来，装完看一眼就知道它到底在找哪儿。 */
+export function configHint() {
+  return configCandidates().map((c) => (fs.existsSync(c) ? '+ ' : '- ') + c).join('\n')
 }
 
 export async function apply(ctx) {
