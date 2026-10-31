@@ -1145,12 +1145,10 @@ function connect(){
 }
 connect();
 
-setInterval(()=>{
-  const d = new Date();
-  $('hClock').textContent = hhmm(d.getTime());
-
-  // 顶部两枚可点的胶囊（2026-10-31 23:5x：之前只有 hover 高亮、点了没反应）
-  (function wireHeader(){
+// 顶部两枚可点的胶囊（2026-10-31：之前只有 hover 高亮、点了没反应）
+// 注意：只能绑一次。之前这段被放在时钟 setInterval 里，每秒重绑一次，
+// 点一下会连开带关，表现成「点了没反应」。
+function wireHeaderOnce(){
     const pop = $('tokPop'), rows = $('tokRows');
     const close = () => { pop.hidden = true; };
     const kfmt2 = (n) => n >= 1e6 ? (n/1e6).toFixed(2)+'M' : n >= 1e3 ? Math.round(n/1e3)+'k' : String(Math.round(n));
@@ -1158,14 +1156,30 @@ setInterval(()=>{
     const build = () => {
       const tk = (window.__lastMeta && window.__lastMeta.tokens) || {};
       const miss = Number(tk.miss)||0, hit = Number(tk.hit)||0, out = Number(tk.out)||0;
+      const money = tk.cost && Number(tk.cost.total);
+      const sym = (tk.cost && tk.cost.symbol) || '¥';
       const rowsArr = [
         ['今天跑了', (Number(tk.turns)||0) + ' 轮', false],
         ['新输入（没命中缓存）', kfmt2(miss), false],
         ['命中缓存（按 0.1 算）', kfmt2(hit), false],
         ['她写出来的', kfmt2(out), false],
-        ['合计计费', kfmt2(miss + out + hit*0.1), true],
       ];
-      rows.innerHTML = rowsArr.map(([a,b,sum]) => '<div class="tp-row' + (sum?' sum':'') + '"><span>' + a + '</span><b class="mono">' + b + '</b></div>').join('');
+      // 近 30 天累计（今天可能刚过零点，只看今天会以为没花钱）
+      if (tk.cost30 && Number.isFinite(Number(tk.cost30.total))) {
+        rowsArr.push(['最近 30 天', ((tk.cost && tk.cost.symbol) || '¥') + Number(tk.cost30.total).toFixed(2) + ' · ' + (Number(tk.cost30.turns)||0) + ' 轮', false]);
+      }
+      let html = rowsArr.map(([a,b]) => '<div class="tp-row"><span>' + a + '</span><b class="mono">' + b + '</b></div>').join('');
+      // 她自己掏的钱：按官方价目表算，分模型、分峰谷
+      if (Number.isFinite(money)) {
+        const zero = !(Number(tk.turns) > 0);
+        html += '<div class="tp-row sum"><span>今天折合人民币</span><b class="mono">' + (zero ? '还没花' : sym + money.toFixed(2)) + '</b></div>';
+        html += '<div class="tp-note">' + (Number(tk.cost.models && tk.cost.models.length) > 1
+          ? '分模型：' + tk.cost.models.map((m) => (m.label || m.model) + ' ' + sym + m.cost.toFixed(2)).join('、')
+          : '按官方价目表算（高峰时段单价翻倍）') + '</div>';
+      } else {
+        html += '<div class="tp-row sum"><span>合计计费</span><b class="mono">' + kfmt2(miss + out + hit*0.1) + '</b></div>';
+      }
+      rows.innerHTML = html;
     };
 
     const place = () => {
@@ -1202,7 +1216,11 @@ setInterval(()=>{
       if (!pop.hidden && !pop.contains(e.target) && e.target !== tok && !tok.contains(e.target)) close();
     });
     document.addEventListener('keydown', (e) => { if (e.key === 'Escape') close(); });
-  })();
+}
+
+wireHeaderOnce();
+setInterval(()=>{
+  $('hClock').textContent = hhmm(Date.now());
   renderNow();
 }, 1000);
 </script>

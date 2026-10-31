@@ -5,6 +5,8 @@ import http from 'node:http';
 import fs from 'node:fs';
 import path from 'node:path';
 import os from 'node:os';
+// 价目表与「此刻是高峰还是空闲」的判断直接用桥接那份，避免两边算出两个数。
+import { resolvePriceTable, priceUsage } from './lib/model-prices.mjs';
 import { fileURLToPath } from 'node:url';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -501,19 +503,51 @@ function readJsonSafe(f) { try { return JSON.parse(fs.readFileSync(f, 'utf8')); 
 function todayStart() { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); }
 function tokensToday() {
   const day0 = todayStart();
-  let miss = 0, out = 0, hit = 0, turns = 0;
+  let miss = 0, out = 0, hit = 0, turns = 0, money = 0;
+  const byModel = new Map();
+  // 价目表：配置里写了 pricing 就用它的，没写就用内置的官方默认表。
+  const table = resolvePriceTable(typeof CFG !== 'undefined' && CFG ? CFG.pricing : undefined);
+  // 另外算一份近 30 天：只给「今天」的话，过了零点就是 0 元，看着像坏了。
+  let turns30 = 0, money30 = 0;
+  const from30 = nowMs() - 30 * 24 * 3600_000;
   try {
     const raw = fs.readFileSync(F.tokens, 'utf8');
     const lines = raw.split(/\r?\n/);
-    for (let i = Math.max(0, lines.length - 4000); i < lines.length; i++) {
+    for (let i = 0; i < lines.length; i++) {
       if (!lines[i].includes('"turn"')) continue;
       let r; try { r = JSON.parse(lines[i]); } catch { continue; }
-      if (Number(r.t) < day0) continue;
+      const at = Number(r.t);
+      if (at >= from30) {
+        const model30 = r.model || table.fallbackModel;
+        money30 += priceUsage(r.b || {}, { model: model30, at, table }).cost.total;
+        turns30++;
+      }
+      if (at < day0) continue;
       turns++;
-      miss += Number(r.b?.cacheMiss) || 0; out += Number(r.b?.output) || 0; hit += Number(r.b?.cacheHit) || 0;
+      const b = r.b || {};
+      miss += Number(b.cacheMiss) || 0;
+      out += Number(b.output) || 0;
+      hit += Number(b.cacheHit) || 0;
+      // 钱必须逐条算：不同模型单价不同，同一模型在不同时段（高峰/空闲）也不同。
+      const model = r.model || table.fallbackModel;
+      const one = priceUsage(b, { model, at: Number(r.t), table });
+      money += one.cost.total;
+      const acc = byModel.get(model) || { model, label: (table.models[model] || {}).label || model, cost: 0 };
+      acc.cost += one.cost.total;
+      byModel.set(model, acc);
     }
   } catch {}
-  return { miss, out, hit, turns, billable: miss + out + hit * 0.1 };
+  return {
+    miss, out, hit, turns,
+    billable: miss + out + hit * 0.1,
+    cost30: { total: money30, turns: turns30 },
+    cost: {
+      total: money,
+      currency: table.currency,
+      symbol: table.symbol,
+      models: [...byModel.values()].sort((a, b) => b.cost - a.cost)
+    }
+  };
 }
 function selfTimeToday() {
   const day0 = todayStart();
