@@ -1197,13 +1197,24 @@ function ekgStep(now){
   EKG.hr += (st.target - EKG.hr) * 0.05;
   if(!EKG.nextAt) EKG.nextAt = now - EKG.span;   // 首帧把整个窗口补满，别一打开是一条平线
   const period = 60000 / Math.max(40, EKG.hr);
-  while(EKG.nextAt <= now){
-    const seed = Math.sin(EKG.nextAt * 0.0007) * 10000;
-    const r = seed - Math.floor(seed);
+  let guard = 400;
+  while(EKG.nextAt <= now && guard-- > 0){
+    const t = EKG.nextAt;
+    const rnd = (k) => { const s = Math.sin(t * k) * 7919; return s - Math.floor(s); };
+    const rShape = rnd(0.0007), rGap = rnd(0.0131), rRare = rnd(0.0043), rRare2 = rnd(0.0019);
+    // 呼吸性窦性心律不齐：约 4.5 秒一呼一吸，间距有节奏地长短；安静时更明显，忙起来收窄
+    const rsaAmp = (st.sleeping ? 0.10 : st.target >= 96 ? 0.035 : 0.075);
+    const rsa = 1 + rsaAmp * Math.sin(t / 1150);
+    // 每次之间再抖一点点
+    const jitter = 1 + (rGap - 0.5) * 0.06;
     let shape = st.sleeping ? "sleep" : (st.target >= 96 ? "busy" : "calm");
-    if(r > 0.8) shape = st.sleeping ? "calm" : "wide";   // 两成概率换个长相
-    EKG.beats.push({ t: EKG.nextAt, sh: SHAPES[shape], shape: shape, real: false });
-    EKG.nextAt += period;
+    if(rShape > 0.8) shape = st.sleeping ? "calm" : "wide";   // 两成概率换个长相
+    let gap = period * rsa * jitter;
+    // 偶发：早搏（来得早、长得怪）后面跟一个代偿间歇；再偶发一次漏跳
+    if(rRare > 0.975){ gap = period * 0.58; shape = "wide"; }
+    else if(rRare2 > 0.985){ gap = period * 1.55; }
+    EKG.beats.push({ t: t, sh: SHAPES[shape], shape: shape, real: false, early: rRare > 0.975 });
+    EKG.nextAt += gap;
   }
   const keep = now - EKG.span - 3000;
   while(EKG.beats.length && EKG.beats[0].t < keep) EKG.beats.shift();
