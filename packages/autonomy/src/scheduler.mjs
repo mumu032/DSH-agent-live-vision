@@ -156,7 +156,8 @@ export function pickReason({ now, conv, cfg, state, random = Math.random }) {
     const idleNeed = Number(st.idleMinutes || 15) * 60e3;
     if (inStudy && now - Number(s.studyAt || 0) >= gap && idleMs(conv, now) >= idleNeed) {
       if (random() < Number(st.probability ?? 0.7)) {
-        return { reason: 'study', why: `距上次自学 ${Math.round((now - Number(s.studyAt || 0)) / HOUR)} 小时`, key };
+        const gapHours = s.studyAt ? Math.round((now - Number(s.studyAt)) / HOUR) : null;
+        return { reason: 'study', why: gapHours ? `距上次自学 ${gapHours} 小时` : '还没自学过', key };
       }
     }
   }
