@@ -9,7 +9,8 @@
   "scripts": {
     "start": "node server.mjs",
     "demo": "node server.mjs --demo",
-    "fixtures": "node fixtures/generate.mjs"
+    "fixtures": "node fixtures/generate.mjs",
+    "test:autonomy": "node --test packages/autonomy/test/scheduler.test.mjs"
   },
   "engines": {
     "node": ">=18"
@@ -30,7 +31,8 @@
     "config.example.json",
     "README.md",
     "LICENSE",
-    "cordis.patch.yml"
+    "cordis.patch.yml",
+    "packages"
   ],
   "main": "dsh/index.js",
   "exports": {

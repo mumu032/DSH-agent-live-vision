@@ -13,3 +13,9 @@ npm-debug.log*
 .DS_Store
 Thumbs.db
 node_modules/
+node_modules/
+config.json
+state/
+*.log
+packages/*/state/
+packages/*/node_modules/

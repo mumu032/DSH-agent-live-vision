@@ -1,0 +1,31 @@
+{
+  "name": "agent-live-autonomy",
+  "version": "0.1.0",
+  "description": "The scheduling core behind an agent that acts on its own: when to wake it, why, and when to let it sleep.",
+  "type": "module",
+  "main": "src/scheduler.mjs",
+  "bin": {
+    "agent-autonomy": "./src/daemon.mjs"
+  },
+  "exports": {
+    ".": "./src/scheduler.mjs",
+    "./prompt": "./src/prompt.mjs",
+    "./daemon": "./src/daemon.mjs",
+    "./package.json": "./package.json"
+  },
+  "scripts": {
+    "test": "node --test test/scheduler.test.mjs",
+    "demo": "node src/daemon.mjs --config fixtures/config.json --state fixtures/state.json --conv fixtures/conversations.json --once --now 2026-11-01T14:30:00"
+  },
+  "engines": {
+    "node": ">=18"
+  },
+  "keywords": [
+    "agent",
+    "scheduler",
+    "autonomy",
+    "proactive",
+    "dsh"
+  ],
+  "license": "MIT"
+}

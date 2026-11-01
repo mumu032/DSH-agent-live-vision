@@ -176,3 +176,8 @@ MIT
 
 `dsh/index.js` 把 `server.mjs` 的 mtime 拼进了 import 的 query，所以重装就会载入新代码，**不用重启整个 DSH**。
 （客户端的 `dsh/client.js` 更简单：刷新一下页面就行。）
+## 顺带开源：自主行动的调度内核
+
+这个仓库只负责「看见」。如果你想连「她什么时候自己动、什么时候睡觉」也一起拿走，看
+[`packages/autonomy`](packages/autonomy/README.md)：
+无依赖、12 个单测、只做决定不发送——睡觉窗口、预算收摊、出门/自学/主动开口的概率与冷却都在里面。
