@@ -7,6 +7,19 @@
 
 ## 三十秒看它能干什么
 
+**一行就能看到它在想什么**（不用 clone，不用装依赖）：
+
+```bash
+npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/heads/main.tar.gz agent-autonomy -- --demo --once --now 2026-11-01T14:30:00
+# → {"reason":"study","why":"还没自学过",…}
+# → {"reason":"explore","why":"今天第 1/6 次出门",…}
+```
+
+换成 `--now 2026-11-01T02:30:00`（凌晨两点），它会说「睡觉窗口，跳过」。
+
+> `npx --package=github:…` 那种写法要走 git，机器上 git 不在 PATH 时会卡住；用上面这个 tarball 直链最稳。
+
+
 ```bash
 cd packages/autonomy
 npm test                                   # 12 个用例，0 依赖

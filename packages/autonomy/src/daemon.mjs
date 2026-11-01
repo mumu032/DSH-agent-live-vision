@@ -40,7 +40,7 @@ const flag = (k) => argv.includes(k);
 const DEMO = flag('--demo');
 const FIX = path.join(HERE, '..', 'fixtures');
 const cfgPath = path.resolve(arg('--config', DEMO ? path.join(FIX, 'config.json') : path.join(HERE, '..', 'config.json')));
-const statePath = path.resolve(arg('--state', DEMO ? path.join(os.tmpdir(), 'agent-autonomy-demo-state.json') : path.join(HERE, '..', 'state', 'scheduler-state.json')));
+const statePath = path.resolve(arg('--state', DEMO ? path.join(os.tmpdir(), 'agent-autonomy-demo-' + process.pid + '.json') : path.join(HERE, '..', 'state', 'scheduler-state.json')));
 const convPath = path.resolve(arg('--conv', DEMO ? path.join(FIX, 'conversations.json') : path.join(HERE, '..', 'state', 'conversations.json')));
 const webhook = arg('--webhook', '');
 const once = flag('--once');

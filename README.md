@@ -192,6 +192,16 @@ MIT
 （客户端的 `dsh/client.js` 更简单：刷新一下页面就行。）
 ## 顺带开源：自主行动的调度内核
 
+**两种「一键」不是同一种东西**：
+
+| 想装的东西 | 一条命令 | 装完是什么 |
+| --- | --- | --- |
+| 面板（DSH 插件） | `install_bundle target=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/heads/main.tar.gz` | 侧边栏多一个「实时探测」 |
+| 调度内核（CLI 库） | `npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/heads/main.tar.gz agent-autonomy -- --demo` | 跑一次，打印它「现在想做什么」；要长期跑就接到你自己的进程里 |
+
+调度内核**不是** DSH 插件（没有 `cordis.patch.yml`），所以不能用 `install_bundle` 装；反过来面板也不替你调度。
+
+
 这个仓库只负责「看见」。如果你想连「她什么时候自己动、什么时候睡觉」也一起拿走，看
 [`packages/autonomy`](packages/autonomy/README.md)：
 无依赖、12 个单测、只做决定不发送——睡觉窗口、预算收摊、出门/自学/主动开口的概率与冷却都在里面。
