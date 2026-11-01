@@ -345,7 +345,7 @@
     background:repeating-linear-gradient(to top,#ffffff08 0 1px,transparent 1px 21px);
     border-bottom:1px solid #1b2740;padding-bottom:1px}
   /* 心电图：最近 3 分钟的"心跳"，每来一条事件就跳一下 */
-  .ekg{position:relative;height:76px;margin:2px 0 12px;border-radius:10px;overflow:hidden;
+  .ekg{position:relative;height:88px;margin:2px 0 12px;border-radius:10px;overflow:hidden;
     background:radial-gradient(130% 110% at 50% 0%, #0a1526 0%, #060c16 72%);
     box-shadow:inset 0 0 0 1px #14243a, inset 0 -20px 34px -22px #38bdf8}
   .ekg canvas{display:block;width:100%;height:100%}
@@ -651,7 +651,7 @@
       <div class="heart">
         <div class="ekg">
           <canvas id="ekg"></canvas>
-          <div class="hud"><b id="ekgBpm">–</b><span>次/分</span><span class="w">· 近 3 分钟 <i id="ekgCnt">0</i> 次</span></div>
+          <div class="hud"><b id="ekgBpm">–</b><span>次/分</span><span class="w">· 25 秒窗口 · 近 1 分钟 <i id="ekgCnt">0</i> 次</span></div>
           <div class="lead">LIVE</div>
         </div>
         <div class="hours" id="hours"></div>
@@ -1149,7 +1149,7 @@ function renderPlats(){
 }
 
 // ---------- 心电图（2026-11-01：产品方要"心跳心电图"那种动态） ----------
-const EKG = { span: 180000, raf: 0, last: 0 };
+const EKG = { span: 25000, raf: 0, last: 0 };
 function ekgPulse(dt, amp){
   // dt 毫秒；一次心跳 = P 波 + QRS 波群 + T 波，越接近 0 越尖
   if(dt < -140 || dt > 420) return 0;
@@ -1161,7 +1161,7 @@ function ekgPulse(dt, amp){
   if(dt >= 140  && dt < 330) v += 0.20 * Math.sin((dt - 140) / 190 * Math.PI); // T
   return v * amp;
 }
-const EKG_PERIOD = 60000 / 72;   // 72 次/分：安静的底子
+const EKG_PERIOD = 60000 / 68;   // 68 次/分：安静的底子
 function ekgBeats(now){
   const from = now - EKG.span - 600;
   const beats = [];
@@ -1197,7 +1197,7 @@ function drawEkg(){
   // 背景细网格（每 15 秒一条竖线，像监护仪）
   g.strokeStyle = "rgba(56,189,248,.07)";
   g.lineWidth = 1;
-  const step = w / (span / 15000);
+  const step = w / (span / 5000);
   for(let x = w % step; x < w; x += step){
     g.beginPath(); g.moveTo(Math.round(x) + .5, 6); g.lineTo(Math.round(x) + .5, hh - 6); g.stroke();
   }
@@ -1209,7 +1209,7 @@ function drawEkg(){
   // 基线（有一点很轻的漂移，别像尺子画的）
   const beats = ekgBeats(now);
   const pts = [];
-  for(let x = 0; x <= w; x += 1.5){
+  for(let x = 0; x <= w; x += 0.6){   // 0.6px 一步：R 尖峰只有三十几毫秒，步子大了峰值会被漏掉（高度就忽高忽低）
     const t = now - span + (x / w) * span;
     let v = 0;
     for(let i = beats.length - 1; i >= 0; i--){
@@ -1219,11 +1219,14 @@ function drawEkg(){
       if(dt >= -140) v += ekgPulse(dt, b.a);
     }
     const n = Math.sin(x * 12.9898) * 43758.5453;
-    v += 0.022 * Math.sin(t / 1700) + (n - Math.floor(n) - 0.5) * 0.005;
+    v += 0.016 * Math.sin(t / 1700) + (n - Math.floor(n) - 0.5) * 0.0032;
     pts.push([x, yb - v * amp]);
   }
-  // 三点平滑：把逐像素的毛刺压掉，线看起来是"笔画的"不是"抖的"
-  for (let i = 1; i < pts.length - 1; i++) pts[i][1] = (pts[i - 1][1] + pts[i][1] * 2 + pts[i + 1][1]) / 4;
+  // 五点平滑：把逐像素的毛刺压掉，线看起来是"笔画的"不是"抖的"
+  const src = pts.map(function (p) { return p[1]; });
+  for (let i = 2; i < pts.length - 2; i++) {
+    pts[i][1] = (src[i - 2] + src[i - 1] * 2 + src[i] * 3 + src[i + 1] * 2 + src[i + 2]) / 9;
+  }
   // 辉光层 + 实线层
   function stroke(color, width, blur){
     g.save();
@@ -1246,10 +1249,10 @@ function drawEkg(){
   // 右上角读数：近 60 秒跳了几次
   const bpm = Math.round(beats.filter(function (b) { return now - b.t <= 60000 && !b.sim; }).length * 1);
   const el = $("ekgBpm");
-  const shown = bpm > 0 ? String(bpm + 72) : "72";
+  const shown = bpm > 0 ? String(bpm + 68) : "68";
   if(el && el.textContent !== shown) el.textContent = shown;
   const cnt = $("ekgCnt");
-  const n3 = beats.filter(function (b) { return !b.sim && now - b.t <= EKG.span; }).length;
+  const n3 = beats.filter(function (b) { return !b.sim && now - b.t <= 60000; }).length;
   if(cnt && cnt.textContent !== String(n3)) cnt.textContent = String(n3);
 }
 function ekgLoop(){
