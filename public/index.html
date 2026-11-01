@@ -936,7 +936,14 @@ function renderMeta(){
     ...((window.LIVE_CFG && window.LIVE_CFG.conversations) || {}),
     'private:2141679162': '私聊',
   };
-  const convShort = (k) => CNAME[k] || String(k).replace(/^(private|group):/, '');
+  // 没在配置里起名字的会话，至少让人能分辨：私聊 ···9162 / 群 ···6762
+  const convShort = (k) => {
+    if (CNAME[k]) return CNAME[k];
+    const s = String(k);
+    const id = s.replace(/^(private|group):/, '');
+    const tail = id.length > 4 ? id.slice(-4) : id;
+    return (s.startsWith('group:') ? '群 ···' : '私聊 ···') + tail;
+  };
   const cs = Object.entries(m.convs || {}).sort((a, b) => (b[1].lastIncomingAt || 0) - (a[1].lastIncomingAt || 0));
   $('convs').innerHTML = cs.length ? cs.map(([k, c]) => {
     const active = c.mode === 'active';
