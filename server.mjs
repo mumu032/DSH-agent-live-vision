@@ -572,9 +572,11 @@ function tokensTodayRaw() {
   const byModel = new Map();
   // 价目表：配置里写了 pricing 就用它的，没写就用内置的官方默认表。
   const table = resolvePriceTable(typeof CFG !== 'undefined' && CFG ? CFG.pricing : undefined);
-  // 另外算一份近 30 天：只给「今天」的话，过了零点就是 0 元，看着像坏了。
+  // 另外算一份本月：只给「今天」的话，过了零点就是 0 元，看着像坏了；
+  // 用自然月（本地 1 号 0 点起）而不是滚动 30 天，跟日历对得上。
   let turns30 = 0, money30 = 0;
-  const from30 = nowMs() - 30 * 24 * 3600_000;
+  const monthStart = (() => { const d = new Date(nowMs()); d.setDate(1); d.setHours(0, 0, 0, 0); return d.getTime(); })();
+  const from30 = monthStart;
   try {
     const raw = fs.readFileSync(F.tokens, 'utf8');
     const lines = raw.split(/\r?\n/);
@@ -605,7 +607,7 @@ function tokensTodayRaw() {
   return {
     miss, out, hit, turns,
     billable: miss + out + hit * 0.1,
-    cost30: { total: money30, turns: turns30 },
+    cost30: { total: money30, turns: turns30, since: from30, month: new Date(from30).getMonth() + 1 },
     cost: {
       total: money,
       currency: table.currency,

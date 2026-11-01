@@ -1507,7 +1507,8 @@ function wireHeaderOnce(){
       ];
       // 近 30 天累计（今天可能刚过零点，只看今天会以为没花钱）
       if (tk.cost30 && Number.isFinite(Number(tk.cost30.total))) {
-        rowsArr.push(['最近 30 天', ((tk.cost && tk.cost.symbol) || '¥') + Number(tk.cost30.total).toFixed(2) + ' · ' + (Number(tk.cost30.turns)||0) + ' 轮', false]);
+        const mo = Number(tk.cost30.month) || (new Date().getMonth() + 1);
+        rowsArr.push(['本月（' + mo + ' 月）', ((tk.cost && tk.cost.symbol) || '¥') + Number(tk.cost30.total).toFixed(2) + ' · ' + (Number(tk.cost30.turns)||0) + ' 轮', false]);
       }
       let html = rowsArr.map(([a,b]) => '<div class="tp-row"><span>' + a + '</span><b class="mono">' + b + '</b></div>').join('');
       // 她自己掏的钱：按官方价目表算，分模型、分峰谷
