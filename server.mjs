@@ -465,10 +465,54 @@ function reasonName(r) {
   return ({ explore: '自己的时间', proactiveCheck: '主动想说话', probability: '掷中了概率', atMention: '被@', nameMention: '被叫名字', keyword: '关键词', question: '被提问', poke: '被拍', anyMessage: '有新消息', message: '新消息', backfill: '补读历史' })[r] || r;
 }
 // ---------- 她自己的时间账本：每出门一次记一行 ----------
+const OUTING_WINDOW = 20 * 60 * 1000;   // 一次"出门"按 20 分钟算（跟自己的时间花销口径一致）
+// 出去这一趟做了什么：把窗口内她在各平台的动作归个类，说人话
+const OUTING_WORD = {
+  bili: '看 B站', heybox: '刷小黑盒', music: '听歌', qzone: '翻空间',
+  draw: '画图', work: '做东西', learn: '查资料', self: '记自己的事', eigenflux: '刷 EigenFlux', idle: '东摸摸西看看',
+};
+function outingHits(ev) {
+  const from = ev.t, to = ev.t + OUTING_WINDOW;
+  return events.filter((e) => e.id !== ev.id && e.kind === 'tool' && e.platform !== 'self'
+    && e.t >= from && e.t <= to && (!ev.key || !e.key || e.key === ev.key));
+}
+function outingSummary(ev) {
+  const hits = outingHits(ev);
+  const tag = ev.tag || '';
+  if (!hits.length) {
+    return Date.now() < ev.t + OUTING_WINDOW ? '出门走走 · ' + tag + '（这会儿还在外面）' : '出门走走 · ' + tag + '，没留下什么';
+  }
+  // 只数真在平台上做事的那种；'idle' 多半是整上下文/记笔记这类，不算'出去干了啥'
+  const meaningful = hits.filter((h) => h.platform && h.platform !== 'idle');
+  const count = new Map();
+  for (const h of meaningful) count.set(h.platform, (count.get(h.platform) || 0) + 1);
+  if (!count.size) {
+    return Date.now() < ev.t + OUTING_WINDOW ? '出门走走 · ' + tag + '（这会儿还在外面）' : '出门走走 · ' + tag + '，在岸上待了会儿';
+  }
+  const parts = [...count.entries()]
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([p, n]) => (OUTING_WORD[p] || '转了一圈') + (n > 1 ? ' ×' + n : ''));
+  return '出门走走 · ' + tag + '：' + parts.join('、');
+}
 function outingEvent(e) {
   const tag = e.study ? '自学' : e.manual ? '手动派的' : '自己想去的';
-  return { t: Number(e.t) || Date.now(), kind: 'tool', action: '自己出门', platform: 'self',
-    tool: 'self-time', detail: '出门走走 · ' + tag };
+  const ev = { t: Number(e.t) || Date.now(), kind: 'tool', action: '自己出门', platform: 'self',
+    tool: 'self-time', key: e.key || '', tag, detail: '出门走走 · ' + tag };
+  ev.detail = outingSummary(ev);   // 历史那次出门可能早就结束了，别一律说还在外面
+  return ev;
+}
+// 窗口走完就把"干啥了"补上（每 15 秒扫一遍最近 40 分钟的出门）
+function refreshOutings() {
+  const since = nowMs() - 12 * 3600 * 1000;
+  for (const ev of events) {
+    if (ev.tool !== 'self-time' || ev.t < since) continue;
+    const next = outingSummary(ev);
+    if (next !== ev.detail) {
+      ev.detail = next;
+      broadcast({ type: 'patch', id: ev.id, detail: next });
+    }
+  }
 }
 const selfTail = new Tailer(F.selftime, (line) => {
   let e; try { e = JSON.parse(line); } catch { return; }
@@ -935,7 +979,9 @@ export function startEngine() {
   if (engineStarted) return;
   engineStarted = true;
   bootHistory();
+  refreshOutings();
   setInterval(() => { callsTail.poll(); sysTail.poll(); selfTail.poll(); }, 700);
+  setInterval(refreshOutings, 15000);
   setInterval(() => broadcast({ type: 'meta', meta: meta() }), 3000);
 }
 
