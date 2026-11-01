@@ -197,7 +197,7 @@ MIT
 | 想装的东西 | 一条命令 | 装完是什么 |
 | --- | --- | --- |
 | 面板（DSH 插件） | `install_bundle target=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/heads/main.tar.gz` | 侧边栏多一个「实时探测」 |
-| 调度内核（CLI 库） | `npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/heads/main.tar.gz agent-autonomy -- --demo` | 跑一次，打印它「现在想做什么」；要长期跑就接到你自己的进程里 |
+| 调度内核（CLI 库） | `npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.1.0.tar.gz agent-autonomy -- --demo` | 跑一次，打印它「现在想做什么」；要长期跑就接到你自己的进程里 |
 
 调度内核**不是** DSH 插件（没有 `cordis.patch.yml`），所以不能用 `install_bundle` 装；反过来面板也不替你调度。
 
