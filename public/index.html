@@ -355,6 +355,7 @@
   .ekg .hud b{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:13px;color:#7ef0c0;
     letter-spacing:0;text-shadow:0 0 10px rgba(126,240,192,.55)}
   .ekg .hud .w{color:#41607d}
+  .ekg .hud em{font-style:normal;color:#7fb2d6}
   .ekg .lead{position:absolute;right:10px;bottom:7px;font-size:10px;color:#41607d;letter-spacing:.08em;
     pointer-events:none}
   .hours .h{flex:1;background:linear-gradient(180deg,#22304a,#1a2438);border-radius:4px 4px 0 0;
@@ -651,7 +652,7 @@
       <div class="heart">
         <div class="ekg">
           <canvas id="ekg"></canvas>
-          <div class="hud"><b id="ekgBpm">–</b><span>次/分</span><span class="w">· 25 秒窗口 · 近 1 分钟 <i id="ekgCnt">0</i> 次</span></div>
+          <div class="hud"><b id="ekgBpm">–</b><span>次/分</span><span class="w">· <em id="ekgState">安静</em> · 25 秒窗口 · 近 1 分钟 <i id="ekgCnt">0</i> 次</span></div>
           <div class="lead">LIVE</div>
         </div>
         <div class="hours" id="hours"></div>
@@ -1148,34 +1149,65 @@ function renderPlats(){
   $('platTag').textContent = '近 24 小时';
 }
 
-// ---------- 心电图（2026-11-01：产品方要"心跳心电图"那种动态） ----------
-const EKG = { span: 25000, raf: 0, last: 0 };
-function ekgPulse(dt, amp){
-  // dt 毫秒；一次心跳 = P 波 + QRS 波群 + T 波，越接近 0 越尖
-  if(dt < -140 || dt > 420) return 0;
-  var v = 0;
-  if(dt >= -150 && dt < -60) v += 0.11 * Math.sin((dt + 150) / 90 * Math.PI);   // P
-  if(dt >= -60  && dt < -8)  v -= 0.18 * Math.sin((dt + 60) / 52 * Math.PI);   // Q
-  if(dt >= -8   && dt < 30)  v += 1.15 * Math.sin((dt + 8) / 38 * Math.PI);    // R
-  if(dt >= 30   && dt < 88)  v -= 0.36 * Math.sin((dt - 30) / 58 * Math.PI);   // S
-  if(dt >= 140  && dt < 330) v += 0.20 * Math.sin((dt - 140) / 190 * Math.PI); // T
-  return v * amp;
+// ---------- 心电图（2026-11-01：产品方要"心跳心电图"，并且"聊天/活动时心率要升"） ----------
+// 心率不是写死的：安静 66、睡着 54、有人找她/她一直在动就往上走，最高 ~128。
+// 波形也不是一种：睡着的、平常的、忙起来的 R 波宽度/高度、S 深度、T 波都不一样，
+// 每一拍还有 20% 概率换成略带差异的变体，看起来才不像复制粘贴。
+const EKG = { span: 25000, raf: 0, beats: [], nextAt: 0, hr: 66, lastReal: 0 };
+const SHAPES = {
+  sleep: { rAmp: 0.74, rW: 52, sAmp: 0.20, tAmp: 0.15, pAmp: 0.10 },
+  calm:  { rAmp: 1.00, rW: 36, sAmp: 0.34, tAmp: 0.115, pAmp: 0.085 },
+  busy:  { rAmp: 1.22, rW: 30, sAmp: 0.40, tAmp: 0.085, pAmp: 0.07 },
+  wide:  { rAmp: 0.92, rW: 54, sAmp: 0.28, tAmp: 0.13, pAmp: 0.09 },   // 偶尔一个宽一点的
+};
+function ekgState(now){
+  const inSleep = !!(meta && meta.sleep && meta.sleep.inSleep);
+  const n60 = S.events.filter(function (e) { return now - e.t <= 60000; }).length;
+  const n300 = S.events.filter(function (e) { return now - e.t <= 300000; }).length;
+  // 有人在跟她说话（近 2 分钟她回过话）也算"在聊"
+  let chatting = false;
+  const convs = (meta && meta.convs) || {};
+  for (const k in convs) { const c = convs[k]; if (c && c.lastAiReplyAt && now - c.lastAiReplyAt <= 120000) chatting = true; }
+  let target = inSleep ? 54 : 66;
+  target += Math.min(34, n60 * 7);          // 这一分钟动得越多跳得越快
+  target += Math.min(14, Math.floor(n300 / 4));
+  if (chatting) target += 12;
+  target = Math.max(48, Math.min(112, target));
+  let label = inSleep ? "睡着" : "安静";
+  if (target >= 96) label = "忙起来了";
+  else if (target >= 80) label = chatting ? "在聊" : "在想事";
+  else if (chatting) label = "在聊";
+  return { target: target, label: label, sleeping: inSleep };
 }
-const EKG_PERIOD = 60000 / 68;   // 68 次/分：安静的底子
-function ekgBeats(now){
-  const from = now - EKG.span - 600;
-  const beats = [];
-  // ① 模拟心跳（始终有，像监护仪不会是一条死线）
-  const k0 = Math.floor(from / EKG_PERIOD);
-  const k1 = Math.ceil(now / EKG_PERIOD);
-  for (let k = k0; k <= k1; k++) beats.push({ t: k * EKG_PERIOD, a: 0.78, sim: true });
-  // ② 她真动过的每一刻，叠一记更明显的
-  for (const e of S.events) {
-    if (e.t < from) continue;
-    const strong = e.kind !== "sys";
-    beats.push({ t: e.t, a: strong ? 1.5 : 0.75, sim: false, fail: !!e.fail });
+function ekgPulse(dt, sh){
+  // 一个心动周期：P → Q → R → S → T；ro 用拍的形状参数
+  if(dt < -150 || dt > 380) return 0;
+  var v = 0;
+  const rW = sh.rW;
+  if(dt >= -150 && dt < -60) v += sh.pAmp * Math.sin((dt + 150) / 90 * Math.PI);
+  if(dt >= -60  && dt < -8)  v -= (sh.sAmp * 0.5) * Math.sin((dt + 60) / 52 * Math.PI);
+  if(dt >= -8   && dt < rW)  v += sh.rAmp * Math.sin((dt + 8) / (rW + 8) * Math.PI);
+  if(dt >= rW   && dt < rW + 56) v -= sh.sAmp * Math.sin((dt - rW) / 56 * Math.PI);
+  if(dt >= 140  && dt < 330) v += sh.tAmp * Math.sin((dt - 140) / 190 * Math.PI);
+  return v;
+}
+function ekgStep(now){
+  const st = ekgState(now);
+  // 心率缓一点地追，不要一条消息就蹦上去
+  EKG.hr += (st.target - EKG.hr) * 0.05;
+  if(!EKG.nextAt) EKG.nextAt = now - EKG.span;   // 首帧把整个窗口补满，别一打开是一条平线
+  const period = 60000 / Math.max(40, EKG.hr);
+  while(EKG.nextAt <= now){
+    const seed = Math.sin(EKG.nextAt * 0.0007) * 10000;
+    const r = seed - Math.floor(seed);
+    let shape = st.sleeping ? "sleep" : (st.target >= 96 ? "busy" : "calm");
+    if(r > 0.8) shape = st.sleeping ? "calm" : "wide";   // 两成概率换个长相
+    EKG.beats.push({ t: EKG.nextAt, sh: SHAPES[shape], shape: shape, real: false });
+    EKG.nextAt += period;
   }
-  return beats.sort(function (x, y) { return x.t - y.t; });
+  const keep = now - EKG.span - 3000;
+  while(EKG.beats.length && EKG.beats[0].t < keep) EKG.beats.shift();
+  return st;
 }
 function drawEkg(){
   const cv = $("ekg");
@@ -1191,10 +1223,11 @@ function drawEkg(){
   g.setTransform(dpr, 0, 0, dpr, 0, 0);
   g.clearRect(0, 0, w, hh);
   const now = Date.now();
+  const st = ekgStep(now);
   const span = EKG.span;
   const yb = hh * 0.66;
-  const amp = hh * 0.52;
-  // 背景细网格（每 15 秒一条竖线，像监护仪）
+  const amp = hh * 0.50;
+  // 监护仪网格：5 秒一格竖线、4 条横线
   g.strokeStyle = "rgba(56,189,248,.07)";
   g.lineWidth = 1;
   const step = w / (span / 5000);
@@ -1206,54 +1239,66 @@ function drawEkg(){
     const y = Math.round(6 + (hh - 12) * i / 3) + .5;
     g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
   }
-  // 基线（有一点很轻的漂移，别像尺子画的）
-  const beats = ekgBeats(now);
+  // 真实事件叠成"额外的拍"（振幅更大，看得见她什么时候动过）
+  const beats = EKG.beats.slice();
+  const from = now - span - 500;
+  for (const e of S.events) {
+    if (e.t < from) continue;
+    if (EKG.beats.some(function (b) { return Math.abs(b.t - e.t) < 350; })) continue;   // 撞上了就不重复跳
+    const sh = Object.assign({}, SHAPES[e.kind === "sys" ? "calm" : "busy"]);
+    sh.rAmp = sh.rAmp * (e.kind === "sys" ? 0.8 : 1.35);
+    beats.push({ t: e.t, sh: sh, shape: "real", real: true, fail: !!e.fail });
+  }
+  beats.sort(function (x, y) { return x.t - y.t; });
+  // 采样
   const pts = [];
-  for(let x = 0; x <= w; x += 0.6){   // 0.6px 一步：R 尖峰只有三十几毫秒，步子大了峰值会被漏掉（高度就忽高忽低）
+  for(let x = 0; x <= w; x += 0.6){
     const t = now - span + (x / w) * span;
     let v = 0;
     for(let i = beats.length - 1; i >= 0; i--){
       const b = beats[i];
       const dt = t - b.t;
-      if(dt > 420) break;
-      if(dt >= -140) v += ekgPulse(dt, b.a);
+      if(dt > 400) break;
+      if(dt >= -160) v += ekgPulse(dt, b.sh);
     }
     const n = Math.sin(x * 12.9898) * 43758.5453;
     v += 0.016 * Math.sin(t / 1700) + (n - Math.floor(n) - 0.5) * 0.0032;
     pts.push([x, yb - v * amp]);
   }
-  // 五点平滑：把逐像素的毛刺压掉，线看起来是"笔画的"不是"抖的"
   const src = pts.map(function (p) { return p[1]; });
   for (let i = 2; i < pts.length - 2; i++) {
     pts[i][1] = (src[i - 2] + src[i - 1] * 2 + src[i] * 3 + src[i + 1] * 2 + src[i + 2]) / 9;
   }
-  // 辉光层 + 实线层
+  // 心率越高，线从薄荷绿往暖黄偏一点（别刺眼）
+  const hot = Math.max(0, Math.min(1, (EKG.hr - 72) / 48));
+  const lineC = "rgba(" + Math.round(126 + hot * 100) + "," + Math.round(240 - hot * 30) + "," + Math.round(192 - hot * 90) + ",.95)";
+  const glowC = "rgba(" + Math.round(52 + hot * 140) + "," + Math.round(211 - hot * 30) + ",153,.30)";
   function stroke(color, width, blur){
     g.save();
     g.beginPath();
     g.moveTo(pts[0][0], pts[0][1]);
     for(let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
-    g.strokeStyle = color; g.lineWidth = width; g.lineJoin = "round"; g.lineCap = "round";
-    g.shadowColor = "rgba(126,240,192,.85)"; g.shadowBlur = blur;
+    g.strokeStyle = color; g.lineWidth = width; g.join = "round"; g.lineJoin = "round"; g.lineCap = "round";
+    g.shadowColor = glowC; g.shadowBlur = blur;
     g.stroke(); g.restore();
   }
-  stroke("rgba(52,211,153,.30)", 5.5, 16);
-  stroke("rgba(126,240,192,.95)", 1.7, 6);
-  // 最右端的笔尖 + 一点余晖
+  stroke(glowC, 5.5, 16);
+  stroke(lineC, 1.7, 6);
   const lastP = pts[pts.length - 1];
   const lg = g.createRadialGradient(lastP[0], lastP[1], 0, lastP[0], lastP[1], 12);
-  lg.addColorStop(0, "rgba(180,255,225,.95)");
+  lg.addColorStop(0, "rgba(210,255,240,.9)");
   lg.addColorStop(1, "rgba(126,240,192,0)");
   g.fillStyle = lg;
   g.beginPath(); g.arc(lastP[0], lastP[1], 12, 0, Math.PI * 2); g.fill();
-  // 右上角读数：近 60 秒跳了几次
-  const bpm = Math.round(beats.filter(function (b) { return now - b.t <= 60000 && !b.sim; }).length * 1);
+  // 读数
   const el = $("ekgBpm");
-  const shown = bpm > 0 ? String(bpm + 68) : "68";
+  const shown = String(Math.round(EKG.hr));
   if(el && el.textContent !== shown) el.textContent = shown;
+  const stEl = $("ekgState");
+  if(stEl && stEl.textContent !== st.label) stEl.textContent = st.label;
   const cnt = $("ekgCnt");
-  const n3 = beats.filter(function (b) { return !b.sim && now - b.t <= 60000; }).length;
-  if(cnt && cnt.textContent !== String(n3)) cnt.textContent = String(n3);
+  const n60 = beats.filter(function (b) { return b.real && now - b.t <= 60000; }).length;
+  if(cnt && cnt.textContent !== String(n60)) cnt.textContent = String(n60);
 }
 function ekgLoop(){
   drawEkg();
@@ -1265,6 +1310,7 @@ function startEkg(){
   if(EKG.raf) return;
   ekgLoop();
 }
+
 function renderHeart(){
   const hr = meta.hourly||new Array(24).fill(0);
   const max = Math.max(1,...hr);
