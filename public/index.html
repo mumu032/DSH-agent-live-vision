@@ -1304,7 +1304,9 @@ setInterval(()=>{
   const ctx = cv.getContext('2d');
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
   let W = 0, H = 0, DPR = 1, cx = 0, cy = 0;
-  let raf = 0, t0 = performance.now(), alive = true, scale = 1;
+  let raf = 0, t0 = performance.now(), alive = true, scale = 1, hold = 0;
+  // 控制器把「等数据」这段的进度推进来，画成中心外圈的一道弧，别让那两秒看着像卡住
+  window.__spHold = (v) => { hold = Math.max(0, Math.min(1, Number(v) || 0)); };
 
   function resize(){
     DPR = Math.min(2, window.devicePixelRatio || 1);
@@ -1472,6 +1474,24 @@ setInterval(()=>{
     sg.addColorStop(1, 'rgba(56,189,248,0)');
     ctx.fillStyle = sg;
     ctx.fillRect(0, scanY - 70, W, 140);
+    // 等数据期间的进度弧（从 12 点顺时针长出来）
+    if (hold > 0){
+      const r = 96 * scale;
+      ctx.save();
+      ctx.translate(cx, cy);
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(56,189,248,.16)';
+      ctx.lineWidth = 2;
+      ctx.arc(0, 0, r, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(150,225,255,.9)';
+      ctx.lineWidth = 2.4;
+      ctx.lineCap = 'round';
+      ctx.arc(0, 0, r, -Math.PI / 2, -Math.PI / 2 + hold * Math.PI * 2);
+      ctx.stroke();
+      ctx.restore();
+    }
     core(t, t / 1500);
     raf = requestAnimationFrame(frame);
   }
@@ -1491,8 +1511,8 @@ setInterval(()=>{
   const el = document.getElementById('splash');
   if (!el) return;
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const MIN = reduce ? 220 : 1400;      // 最短停留
-  const MAX = reduce ? 600 : 3400;      // 兜底
+  const MIN = reduce ? 220 : 3000;      // 最短停留（让它真的像一次自检）
+  const MAX = reduce ? 600 : 5200;      // 兜底
   const t0 = performance.now();
   const cfg = window.LIVE_CFG || {};
   const nameEl = document.getElementById('spName');
@@ -1504,7 +1524,9 @@ setInterval(()=>{
   const LINES = [
     ['加载账本读取器', 'state/*.jsonl'],
     ['挂载会话状态', 'social-v2'],
+    ['载入记忆图索引', 'memory-graph'],
     ['校验 token 账本', 'token-usage'],
+    ['校对时间与天气', 'clock · weather'],
     ['接通实时流', 'sse'],
     ['就绪', 'waiting data'],
   ];
@@ -1529,8 +1551,8 @@ setInterval(()=>{
     if (step < LINES.length){
       pushLine(step);
       step += 1;
-      setProgress(12 + step * 14);
-      setTimeout(tick, reduce ? 30 : 200);
+      setProgress(8 + step * 12);
+      setTimeout(tick, reduce ? 30 : 300);
       return;
     }
     // 日志打完，等数据
@@ -1539,6 +1561,16 @@ setInterval(()=>{
       if (done) return;
       if (document.querySelector('#list .ev') || window.__lastMeta) dataReady = true;
       if (dataReady) setProgress(progress + (100 - progress) * 0.35);
+      const holdV = Math.min(1, (performance.now() - t0) / MIN);
+      if (!dataReady) window.__spHold && window.__spHold(holdV * 0.92);
+      else {
+        window.__spHold && window.__spHold(holdV);
+        const lastRow = boot.lastElementChild;
+        if (lastRow && !lastRow.dataset.ready){
+          lastRow.dataset.ready = '1';
+          lastRow.innerHTML = '<i>✓</i> 就绪 <b>ready</b>';
+        }
+      }
       const waited = performance.now() - waitStart;
       if (dataReady && (performance.now() - t0) >= MIN){ hide(); return; }
       if (waited > MAX - 900){ setProgress(100); hide(); return; }
