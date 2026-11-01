@@ -203,5 +203,5 @@ MIT
 
 
 这个仓库只负责「看见」。如果你想连「她什么时候自己动、什么时候睡觉」也一起拿走，看
-[`packages/autonomy`](packages/autonomy/README.md)：
+[`packages/`](packages/README.md)（索引）里的 [`autonomy`](packages/autonomy/README.md)：
 无依赖、12 个单测、只做决定不发送——睡觉窗口、预算收摊、出门/自学/主动开口的概率与冷却都在里面。
