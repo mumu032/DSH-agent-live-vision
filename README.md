@@ -11,6 +11,16 @@
 ![桌面](screenshots/desktop.png)
 
 <details>
+<summary>启动时的样子（点开面板会先扫一圈）</summary>
+
+![开屏](screenshots/splash.png)
+
+三段同心环 + 扫描扇 + 往里漂的粒子，底下是自检日志（加载账本 → 挂载会话 → 装记忆图 → 校验 token → 接通实时流）；
+数据真到了才收，最短亮 3 秒、最长 5.2 秒；系统开了「减少动态效果」就只画一帧。
+
+</details>
+
+<details>
 <summary>手机上的样子</summary>
 
 ![手机](screenshots/mobile.png)
@@ -112,6 +122,10 @@ node server.mjs                      # 默认 http://0.0.0.0:3110
 MIT
 
 ## 在 DSH 里当插件用（推荐）
+
+> 装完长什么样：就是最上面那两张图——侧边栏多一个雷达图标「实时探测」，点开是同一套面板；
+> 设置 → 实时探测 里也是它（嵌在设置页里），地址是 `/api/agent-live/`。
+
 
 这个仓库有两种用法，同一个包：
 

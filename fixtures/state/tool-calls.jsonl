@@ -1,40 +1,40 @@
-{"type":"call","time":"2026-10-31T00:12:01.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_wait_for_messages","args":"{\"key\":\"private:10000001\",\"token\":\"***\",\"timeoutMs\":300000}"}
-{"type":"result","time":"2026-10-31T00:12:01.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_wait_for_messages","ok":true}
-{"type":"call","time":"2026-10-31T00:15:02.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_search","args":"{\"query\":\"手冲咖啡 水温 和 粉水比 怎么定\"}"}
-{"type":"result","time":"2026-10-31T00:15:02.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_search","ok":true}
-{"type":"call","time":"2026-10-31T00:18:03.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_fetch","args":"{\"url\":\"https://example.com/coffee-guide\"}"}
-{"type":"result","time":"2026-10-31T00:18:03.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_fetch","ok":true}
-{"type":"call","time":"2026-10-31T00:24:04.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_knowledge","args":"{\"action\":\"write\",\"title\":\"手冲咖啡：水温比粉水比更容易翻车\"}"}
-{"type":"result","time":"2026-10-31T00:24:04.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_knowledge","ok":true}
-{"type":"call","time":"2026-10-31T02:06:05.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_search","args":"{\"keyword\":\"手冲 咖啡 新手 教程\",\"order\":\"click\"}"}
-{"type":"result","time":"2026-10-31T02:06:05.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_search","ok":true}
-{"type":"call","time":"2026-10-31T02:11:06.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_subtitle","args":"{\"bvid\":\"BV1xx411c7mD\"}"}
-{"type":"result","time":"2026-10-31T02:11:06.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_subtitle","ok":true}
-{"type":"call","time":"2026-10-31T04:33:07.000Z","key":"group:20000003","sessionId":"demo","tool":"qq_knowledge","args":"{\"action\":\"list\"}"}
-{"type":"result","time":"2026-10-31T04:33:07.000Z","key":"group:20000003","sessionId":"demo","tool":"qq_knowledge","ok":true}
-{"type":"call","time":"2026-10-31T04:40:08.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","args":"{\"action\":\"daily\"}"}
-{"type":"result","time":"2026-10-31T04:40:08.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","ok":true}
-{"type":"call","time":"2026-10-31T04:55:09.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","args":"{\"action\":\"feel\",\"songId\":\"1901\"}"}
-{"type":"result","time":"2026-10-31T04:55:09.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","ok":true}
-{"type":"call","time":"2026-10-31T06:20:10.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","args":"{\"action\":\"feed\",\"limit\":8}"}
-{"type":"result","time":"2026-10-31T06:20:10.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","ok":true}
-{"type":"call","time":"2026-10-31T06:26:11.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","args":"{\"action\":\"post\",\"id\":\"5201314\"}"}
-{"type":"result","time":"2026-10-31T06:26:11.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","ok":true}
-{"type":"call","time":"2026-10-31T07:02:12.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","args":"{\"action\":\"feeds\",\"num\":3}"}
-{"type":"result","time":"2026-10-31T07:02:12.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","ok":true}
-{"type":"call","time":"2026-10-31T07:08:13.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","args":"{\"action\":\"post\",\"content\":\"今天的雨下得像有人在楼顶倒水，我在窗边听了十分钟。\"}"}
-{"type":"result","time":"2026-10-31T07:08:13.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","ok":true}
-{"type":"call","time":"2026-10-31T08:44:14.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_draw","args":"{\"key\":\"private:10000001\",\"prompt\":\"rainy window, tea cup, warm lamp\",\"size\":\"portrait\"}"}
-{"type":"result","time":"2026-10-31T08:44:14.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_draw","ok":true}
-{"type":"call","time":"2026-10-31T09:30:15.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_see_image","args":"{\"key\":\"private:10000001\",\"source\":\"https://example.com/pic.jpg\"}"}
-{"type":"result","time":"2026-10-31T09:30:15.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_see_image","ok":false,"error":"取图失败：HTTP 403"}
-{"type":"call","time":"2026-10-31T10:05:16.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_diary_write","args":"{\"key\":\"private:10000001\",\"text\":\"雨停了，楼下有人在收衣服。\",\"mood\":\"松下来\"}"}
-{"type":"result","time":"2026-10-31T10:05:16.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_diary_write","ok":true}
-{"type":"call","time":"2026-10-31T11:12:17.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_want_add","args":"{\"key\":\"private:10000001\",\"text\":\"搞明白冷萃为什么要泡那么久\"}"}
-{"type":"result","time":"2026-10-31T11:12:17.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_want_add","ok":true}
-{"type":"call","time":"2026-10-31T12:01:18.000Z","key":"private:10000001","sessionId":"demo","tool":"compress","args":"{}"}
-{"type":"result","time":"2026-10-31T12:01:18.000Z","key":"private:10000001","sessionId":"demo","tool":"compress","ok":true}
-{"type":"call","time":"2026-10-31T13:30:19.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_get_unread_messages","args":"{\"key\":\"private:10000001\",\"token\":\"***\"}"}
-{"type":"result","time":"2026-10-31T13:30:19.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_get_unread_messages","ok":true}
-{"type":"call","time":"2026-10-31T13:31:20.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_mark_read","args":"{\"key\":\"private:10000001\",\"token\":\"***\",\"throughSeq\":2048}"}
-{"type":"result","time":"2026-10-31T13:31:20.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_mark_read","ok":true}
+{"type":"call","time":"2026-11-01T00:12:01.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_wait_for_messages","args":"{\"key\":\"private:10000001\",\"token\":\"***\",\"timeoutMs\":300000}"}
+{"type":"result","time":"2026-11-01T00:12:01.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_wait_for_messages","ok":true}
+{"type":"call","time":"2026-11-01T00:15:02.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_search","args":"{\"query\":\"手冲咖啡 水温 和 粉水比 怎么定\"}"}
+{"type":"result","time":"2026-11-01T00:15:02.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_search","ok":true}
+{"type":"call","time":"2026-11-01T00:18:03.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_fetch","args":"{\"url\":\"https://example.com/coffee-guide\"}"}
+{"type":"result","time":"2026-11-01T00:18:03.000Z","key":"private:10000001","sessionId":"demo","tool":"mcp__web-search-safe__web_fetch","ok":true}
+{"type":"call","time":"2026-11-01T00:24:04.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_knowledge","args":"{\"action\":\"write\",\"title\":\"手冲咖啡：水温比粉水比更容易翻车\"}"}
+{"type":"result","time":"2026-11-01T00:24:04.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_knowledge","ok":true}
+{"type":"call","time":"2026-11-01T02:06:05.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_search","args":"{\"keyword\":\"手冲 咖啡 新手 教程\",\"order\":\"click\"}"}
+{"type":"result","time":"2026-11-01T02:06:05.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_search","ok":true}
+{"type":"call","time":"2026-11-01T02:11:06.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_subtitle","args":"{\"bvid\":\"BV1xx411c7mD\"}"}
+{"type":"result","time":"2026-11-01T02:11:06.000Z","key":"private:10000001","sessionId":"demo","tool":"bili_subtitle","ok":true}
+{"type":"call","time":"2026-11-01T04:33:07.000Z","key":"group:20000003","sessionId":"demo","tool":"qq_knowledge","args":"{\"action\":\"list\"}"}
+{"type":"result","time":"2026-11-01T04:33:07.000Z","key":"group:20000003","sessionId":"demo","tool":"qq_knowledge","ok":true}
+{"type":"call","time":"2026-11-01T04:40:08.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","args":"{\"action\":\"daily\"}"}
+{"type":"result","time":"2026-11-01T04:40:08.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","ok":true}
+{"type":"call","time":"2026-11-01T04:55:09.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","args":"{\"action\":\"feel\",\"songId\":\"1901\"}"}
+{"type":"result","time":"2026-11-01T04:55:09.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_music","ok":true}
+{"type":"call","time":"2026-11-01T06:20:10.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","args":"{\"action\":\"feed\",\"limit\":8}"}
+{"type":"result","time":"2026-11-01T06:20:10.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","ok":true}
+{"type":"call","time":"2026-11-01T06:26:11.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","args":"{\"action\":\"post\",\"id\":\"5201314\"}"}
+{"type":"result","time":"2026-11-01T06:26:11.000Z","key":"group:20000002","sessionId":"demo","tool":"qq_heybox","ok":true}
+{"type":"call","time":"2026-11-01T07:02:12.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","args":"{\"action\":\"feeds\",\"num\":3}"}
+{"type":"result","time":"2026-11-01T07:02:12.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","ok":true}
+{"type":"call","time":"2026-11-01T07:08:13.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","args":"{\"action\":\"post\",\"content\":\"今天的雨下得像有人在楼顶倒水，我在窗边听了十分钟。\"}"}
+{"type":"result","time":"2026-11-01T07:08:13.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_qzone","ok":true}
+{"type":"call","time":"2026-11-01T08:44:14.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_draw","args":"{\"key\":\"private:10000001\",\"prompt\":\"rainy window, tea cup, warm lamp\",\"size\":\"portrait\"}"}
+{"type":"result","time":"2026-11-01T08:44:14.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_draw","ok":true}
+{"type":"call","time":"2026-11-01T09:30:15.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_see_image","args":"{\"key\":\"private:10000001\",\"source\":\"https://example.com/pic.jpg\"}"}
+{"type":"result","time":"2026-11-01T09:30:15.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_see_image","ok":false,"error":"取图失败：HTTP 403"}
+{"type":"call","time":"2026-11-01T10:05:16.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_diary_write","args":"{\"key\":\"private:10000001\",\"text\":\"雨停了，楼下有人在收衣服。\",\"mood\":\"松下来\"}"}
+{"type":"result","time":"2026-11-01T10:05:16.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_diary_write","ok":true}
+{"type":"call","time":"2026-11-01T11:12:17.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_want_add","args":"{\"key\":\"private:10000001\",\"text\":\"搞明白冷萃为什么要泡那么久\"}"}
+{"type":"result","time":"2026-11-01T11:12:17.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_want_add","ok":true}
+{"type":"call","time":"2026-11-01T12:01:18.000Z","key":"private:10000001","sessionId":"demo","tool":"compress","args":"{}"}
+{"type":"result","time":"2026-11-01T12:01:18.000Z","key":"private:10000001","sessionId":"demo","tool":"compress","ok":true}
+{"type":"call","time":"2026-11-01T13:30:19.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_get_unread_messages","args":"{\"key\":\"private:10000001\",\"token\":\"***\"}"}
+{"type":"result","time":"2026-11-01T13:30:19.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_get_unread_messages","ok":true}
+{"type":"call","time":"2026-11-01T13:31:20.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_mark_read","args":"{\"key\":\"private:10000001\",\"token\":\"***\",\"throughSeq\":2048}"}
+{"type":"result","time":"2026-11-01T13:31:20.000Z","key":"private:10000001","sessionId":"demo","tool":"qq_mark_read","ok":true}
