@@ -628,6 +628,16 @@ function selfTimeSpentToday() {
   return { tokens, sessions: windows.length };
 }
 // 她"自己出门"的真实闸门（照抄 bridge.js:13253-13272 的判定，只读不写）
+// 睡觉窗口（跟桥接里 socialV2.sleep 一致）：只用来展示，不参与判断
+function sleepMeta(now = Date.now()) {
+  const cfg = readJsonSafe(path.join(ROOT, 'config.json')) || {};
+  const c = cfg.socialV2?.sleep || {};
+  const start = Number.isFinite(Number(c.startHour)) ? Number(c.startHour) : 1;
+  const end = Number.isFinite(Number(c.endHour)) ? Number(c.endHour) : 8;
+  const h = new Date(now).getHours();
+  const inSleep = c.enabled !== false && start !== end && (start < end ? (h >= start && h < end) : (h >= start || h < end));
+  return { enabled: c.enabled !== false, inSleep, startHour: start, endHour: end };
+}
 function exploreGate() {
   const cfg = readJsonSafe(path.join(ROOT, 'config.json')) || {};
   const p = cfg.socialV2?.proactive ?? {};
@@ -750,6 +760,7 @@ function meta() {
     tokens: tk,
     qq: { online: qqLink.online, at: qqLink.at, lastError: qqLink.lastError },
     selfTime: { today: selfTimeToday(), lastAt: lastOutingAt(), budget: Number(T.selfTimeTokensPerDay) || 200000 },
+    sleep: sleepMeta(),
     explore: exploreGate(),
     lastEventAt: events.length ? events[events.length - 1].t : 0,
   };

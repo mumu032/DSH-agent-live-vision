@@ -454,46 +454,74 @@
 }
 
 
-/* ── 开屏：像 App 启动那一刻，先亮一下再进 ─────────────────────────── */
-#splash{position:fixed;inset:0;z-index:9999;display:flex;align-items:center;justify-content:center;
-  background:radial-gradient(120% 90% at 50% 0%,#0e1d31 0%,#080d18 55%,#05080f 100%);
-  transition:opacity .45s ease,visibility .45s ease}
+/* ── 开屏：像仪器上电自检（canvas HUD） ─────────────────────────────── */
+#splash{position:fixed;inset:0;z-index:9999;background:#04070d;overflow:hidden;
+  transition:opacity .5s ease,visibility .5s ease}
 #splash.gone{opacity:0;visibility:hidden}
-.sp-wrap{position:relative;display:flex;flex-direction:column;align-items:center;gap:13px}
-.sp-ring{position:absolute;top:-16px;width:120px;height:120px;border-radius:50%;
-  background:conic-gradient(from 0deg,rgba(56,189,248,0) 0deg,rgba(56,189,248,.9) 80deg,rgba(56,189,248,0) 175deg);
-  -webkit-mask:radial-gradient(circle,transparent 63%,#000 64%);mask:radial-gradient(circle,transparent 63%,#000 64%);
-  animation:sp-spin 1.15s linear infinite}
-.sp-orb{width:88px;height:88px;border-radius:50%;display:grid;place-items:center;font-size:32px;
-  background:linear-gradient(160deg,#13253d,#0a1524);border:1px solid #1e3a5c;color:#dbe9fb;
-  box-shadow:0 0 52px -10px rgba(56,189,248,.8),0 0 120px -30px rgba(56,189,248,.5),inset 0 1px 0 rgba(255,255,255,.08);
-  animation:sp-pop .65s cubic-bezier(.2,.9,.3,1.35) both}
-.sp-name{margin-top:20px;font-size:14px;letter-spacing:.22em;color:#cfe0f5;animation:sp-fade .6s .1s both}
-.sp-sub{font-size:12px;color:#7d90a8;letter-spacing:.06em;animation:sp-fade .6s .25s both}
-.sp-dots i{display:inline-block;width:4px;height:4px;margin:0 2px;border-radius:50%;background:#38bdf8;
-  opacity:.25;animation:sp-blink 1.1s infinite}
-.sp-dots i:nth-child(2){animation-delay:.18s}.sp-dots i:nth-child(3){animation-delay:.36s}
-@keyframes sp-spin{to{transform:rotate(360deg)}}
-@keyframes sp-pop{from{transform:scale(.62);opacity:0}to{transform:scale(1);opacity:1}}
-@keyframes sp-fade{from{opacity:0;transform:translateY(4px)}to{opacity:1;transform:none}}
-@keyframes sp-blink{0%,100%{opacity:.25}50%{opacity:1}}
-@media (prefers-reduced-motion: reduce){.sp-ring{animation:none}.sp-orb,.sp-name,.sp-sub{animation:none}}
+#spCanvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+
+/* HUD 边框：四角括号 + 上下细线 */
+.sp-hud{position:absolute;inset:18px;pointer-events:none}
+.sp-hud::before,.sp-hud::after{content:"";position:absolute;left:0;right:0;height:1px;
+  background:linear-gradient(90deg,transparent,rgba(56,189,248,.22),transparent)}
+.sp-hud::before{top:0}.sp-hud::after{bottom:0}
+.sp-corner{position:absolute;width:22px;height:22px;border:1px solid rgba(56,189,248,.42)}
+.sp-corner.tl{top:0;left:0;border-right:0;border-bottom:0}
+.sp-corner.tr{top:0;right:0;border-left:0;border-bottom:0}
+.sp-corner.bl{bottom:0;left:0;border-right:0;border-top:0}
+.sp-corner.br{bottom:0;right:0;border-left:0;border-top:0}
+
+/* 中央文字层 */
+.sp-panel{position:absolute;left:50%;top:64%;transform:translate(-50%,0);
+  display:flex;flex-direction:column;align-items:center;width:min(460px,84vw);
+  text-align:center}
+.sp-name{font-size:17px;letter-spacing:.18em;text-indent:.18em;color:#eaf4ff;
+  text-shadow:0 0 18px rgba(56,189,248,.55);animation:sp-in .7s .12s both}
+.sp-tag{font-family:var(--mono,"JetBrains Mono",Consolas,monospace);font-size:10px;
+  letter-spacing:.28em;color:#6f9dc4;margin-top:7px;animation:sp-in .7s .22s both}
+.sp-boot{font-family:var(--mono,"JetBrains Mono",Consolas,monospace);font-size:11px;line-height:1.85;
+  color:#87a9c6;width:100%;text-align:left;margin-top:20px;min-height:4.2em}
+.sp-boot div{opacity:0;animation:sp-line .28s forwards}
+.sp-boot b{color:#7dd3fc;font-weight:400}
+.sp-boot i{color:#4ade80;font-style:normal}
+.sp-bar{position:relative;width:100%;height:2px;margin-top:16px;background:rgba(148,163,184,.14);overflow:hidden}
+.sp-bar span{position:absolute;left:0;top:0;bottom:0;width:0;background:linear-gradient(90deg,#0284c7,#7dd3fc);
+  box-shadow:0 0 14px rgba(56,189,248,.9);transition:width .55s cubic-bezier(.3,.8,.3,1)}
+.sp-meta{display:flex;justify-content:space-between;width:100%;margin-top:8px;
+  font-family:var(--mono,"JetBrains Mono",Consolas,monospace);font-size:10px;letter-spacing:.16em;color:#3f678a}
+.sp-meta b{color:#8fb8d8;font-weight:400}
+@keyframes sp-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@keyframes sp-line{from{opacity:0;transform:translateX(-4px)}to{opacity:1;transform:none}}
+@keyframes sp-flash{0%{opacity:0}30%{opacity:.55}100%{opacity:0}}
+#splash.flash::after{content:"";position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,#dff3ff,#38bdf8 45%,transparent 72%);
+  animation:sp-flash .42s ease-out forwards;pointer-events:none}
+@media (max-height: 640px){
+  .sp-panel{top:60%}
+  .sp-boot{margin-top:14px;min-height:3.4em}
+}
+@media (max-width: 520px){
+  .sp-panel{width:86vw}
+  .sp-name{font-size:15px}
+  .sp-boot{font-size:10.5px}
+}
+@media (prefers-reduced-motion: reduce){
+  .sp-name,.sp-tag,.sp-boot div{animation:none;opacity:1}
+  #splash.flash::after{animation:none;opacity:0}
+}
 </style>
 </head>
 <body>
 <div id="splash">
-  <div class="sp-wrap">
-    <div class="sp-ring"></div>
-    <div class="sp-orb" id="spOrb">
-    <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="#a5e4ff" stroke-linecap="round" aria-hidden="true">
-      <circle cx="12" cy="12" r="8.6" stroke-width="1.3" opacity=".38"/>
-      <circle cx="12" cy="12" r="4.1" stroke-width="1.5" opacity=".75"/>
-      <circle cx="12" cy="12" r="1.5" fill="#7dd3fc" stroke="none"/>
-      <path d="M12 1.4v2.8M12 19.8v2.8M1.4 12h2.8M19.8 12h2.8" stroke-width="1.3" opacity=".45"/>
-    </svg>
+  <canvas id="spCanvas"></canvas>
+  <div class="sp-hud">
+    <i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
   </div>
+  <div class="sp-panel">
     <div class="sp-name" id="spName">实时探测</div>
-    <div class="sp-sub">正在接上她的账本<span class="sp-dots"><i></i><i></i><i></i></span></div>
+    <div class="sp-tag">AGENT · LIVE · TELEMETRY</div>
+    <div class="sp-boot" id="spBoot"></div>
+    <div class="sp-bar"><span id="spBar"></span></div>
+    <div class="sp-meta"><span>READ&nbsp;ONLY</span><span id="spPct">0%</span></div>
   </div>
 </div>
 <header>
@@ -857,8 +885,10 @@ function renderNow(){
   const toolAt = meta.lastToolAt || last.t;
   const toolIdle = Date.now() - toolAt;
   $('statusLine').textContent = awake
-    ? '正在动 · 最近 '+ago(last.t)
-    : (toolIdle < 3600_000 ? '安静着 · 上次动在 '+ago(toolAt) : '睡了 · 上次动在 '+ago(toolAt));
+    ? '正在动 · 最近 ' + ago(last.t)
+    : (meta.sleep && meta.sleep.inSleep
+        ? '睡了（' + String(meta.sleep.startHour).padStart(2, '0') + ':00–' + String(meta.sleep.endHour).padStart(2, '0') + ':00）· 上次动在 ' + ago(toolAt)
+        : (toolIdle < 3600_000 ? '安静着 · 上次动在 ' + ago(toolAt) : '睡了 · 上次动在 ' + ago(toolAt)));
 }
 
 // 今天的小结：从她自己的账本里数，不猜
@@ -995,9 +1025,11 @@ function renderMeta(){
   $('stLast').textContent = lastOut ? `上次真出门：${ago(lastOut)}` : '这条账本里还没出过门';
   $('explainWhy').textContent = ex.enabled === false ? '「自己去各大平台玩」这个开关是关着的'
     : (ex.nextInMs == null ? '今天的出门额度用完了，等明天'
-      : (ex.inQuiet
-        ? `现在是她的安静时段（${ex.quietStartHour}:00–${ex.quietEndHour}:00）：不主动找人说话，但自己出门只是概率降到 30%；${idleWord(ex.nextInMs)}够条件`
-        : `这会儿允许她自己出门（每次概率 ${Math.round((ex.probability||0)*100)}%）；${idleWord(ex.nextInMs)}够条件`));
+      : (meta.sleep && meta.sleep.inSleep
+        ? `她睡着了（${String(meta.sleep.startHour).padStart(2, '0')}:00–${String(meta.sleep.endHour).padStart(2, '0')}:00）：不主动找人、也不自己出门；被叫醒才会有反应`
+        : (ex.inQuiet
+          ? `现在是她的安静时段（${ex.quietStartHour}:00–${ex.quietEndHour}:00）：不主动找人说话，但自己出门只是概率降到 30%；${idleWord(ex.nextInMs)}够条件`
+          : `这会儿允许她自己出门（每次概率 ${Math.round((ex.probability || 0) * 100)}%）；${idleWord(ex.nextInMs)}够条件`)));
 
   renderToday();
   renderPlats();
@@ -1264,29 +1296,271 @@ setInterval(()=>{
   renderNow();
 }, 1000);
 
-// 开屏：至少亮 0.9 秒；等到第一屏数据真的渲染出来再收，最长等 2.5 秒。
+// 开屏的 canvas 层：仪器自检的味道 —— 同心环、扫描扇、刻度、粒子、中心核。
+// 只画视觉，不决定什么时候收（那个写在 index.html 的 splash() 里）。
+(function spCanvas(){
+  const cv = document.getElementById('spCanvas');
+  if (!cv) return;
+  const ctx = cv.getContext('2d');
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  let W = 0, H = 0, DPR = 1, cx = 0, cy = 0;
+  let raf = 0, t0 = performance.now(), alive = true, scale = 1;
+
+  function resize(){
+    DPR = Math.min(2, window.devicePixelRatio || 1);
+    W = cv.clientWidth; H = cv.clientHeight;
+    cv.width = Math.round(W * DPR); cv.height = Math.round(H * DPR);
+    ctx.setTransform(DPR, 0, 0, DPR, 0, 0);
+    cx = W / 2; cy = H * 0.40;
+    scale = Math.min(1, Math.min(W, H) / 880);
+  }
+  resize();
+  window.addEventListener('resize', resize);
+
+  // 粒子：从外圈慢慢往里漂，像在读数
+  const parts = Array.from({ length: 74 }, () => ({
+    a: Math.random() * Math.PI * 2,
+    r: (190 + Math.random() * 240) * (scale || 1),
+    v: 0.10 + Math.random() * 0.34,
+    s: Math.random() < .22 ? 1.6 : 1,
+  }));
+  // 环上的“读数点”：随机闪
+  const blips = Array.from({ length: 7 }, () => ({
+    a: Math.random() * Math.PI * 2, r: 112 + Math.random() * 92, life: Math.random()
+  }));
+
+  const CY = '56,189,248';
+  function ring(r, opts){
+    const { dash = 0, rot = 0, alpha = .18, w = 1, gap = 4 } = opts || {};
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.beginPath();
+    ctx.strokeStyle = 'rgba(' + CY + ',' + alpha + ')';
+    ctx.lineWidth = w;
+    if (dash) ctx.setLineDash([dash, gap]);
+    ctx.arc(0, 0, r, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.restore();
+  }
+  function ticks(r, count, len, alpha, rot){
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    ctx.strokeStyle = 'rgba(' + CY + ',' + alpha + ')';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < count; i++){
+      const a = (i / count) * Math.PI * 2;
+      const big = i % 6 === 0;
+      const l = big ? len * 1.8 : len;
+      ctx.beginPath();
+      ctx.moveTo(Math.cos(a) * r, Math.sin(a) * r);
+      ctx.lineTo(Math.cos(a) * (r + l), Math.sin(a) * (r + l));
+      ctx.stroke();
+    }
+    ctx.restore();
+  }
+  function sweep(rot, rMax){
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(rot);
+    const span = Math.PI * 0.62;
+    const steps = 64;
+    for (let i = 0; i < steps; i++){
+      const f = i / steps;                       // 0 = 尾巴，1 = 头
+      const a0 = span * f, a1 = span * ((i + 1) / steps);
+      ctx.beginPath();
+      ctx.strokeStyle = 'rgba(125,211,252,' + (Math.pow(f, 2.1) * 0.8).toFixed(3) + ')';
+      ctx.lineWidth = 1.1 + f * 2.4;
+      ctx.arc(0, 0, rMax, a0, a1);
+      ctx.stroke();
+    }
+    // 亮头
+    const hx = Math.cos(span) * rMax, hy = Math.sin(span) * rMax;
+    const g = ctx.createRadialGradient(hx, hy, 0, hx, hy, 10);
+    g.addColorStop(0, 'rgba(235,250,255,.95)');
+    g.addColorStop(1, 'rgba(125,211,252,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(hx, hy, 10, 0, Math.PI * 2); ctx.fill();
+    ctx.restore();
+  }
+  function grid(t){
+    const step = 64, off = (t * 0.006) % step;
+    ctx.save();
+    ctx.strokeStyle = 'rgba(56,189,248,.07)';
+    ctx.lineWidth = 1;
+    for (let x = -off; x < W; x += step){ ctx.beginPath(); ctx.moveTo(x, 0); ctx.lineTo(x, H); ctx.stroke(); }
+    for (let y = -off; y < H; y += step){ ctx.beginPath(); ctx.moveTo(0, y); ctx.lineTo(W, y); ctx.stroke(); }
+    ctx.restore();
+  }
+  function core(t, p){
+    const pulse = 0.5 + 0.5 * Math.sin(t * 0.004);
+    // 外发光
+    const g = ctx.createRadialGradient(cx, cy, 0, cx, cy, 96);
+    g.addColorStop(0, 'rgba(56,189,248,' + (0.16 + pulse * 0.10).toFixed(3) + ')');
+    g.addColorStop(.55, 'rgba(56,189,248,.05)');
+    g.addColorStop(1, 'rgba(56,189,248,0)');
+    ctx.fillStyle = g;
+    ctx.beginPath(); ctx.arc(cx, cy, 96, 0, Math.PI * 2); ctx.fill();
+    // 六边形轮廓
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.rotate(Math.PI / 6 + t * 0.00018);
+    ctx.beginPath();
+    for (let i = 0; i < 6; i++){
+      const a = (i / 6) * Math.PI * 2;
+      const r = 30;
+      const x = Math.cos(a) * r, y = Math.sin(a) * r;
+      i ? ctx.lineTo(x, y) : ctx.moveTo(x, y);
+    }
+    ctx.closePath();
+    ctx.strokeStyle = 'rgba(180,235,255,' + (0.70 + pulse * 0.30).toFixed(2) + ')';
+    ctx.lineWidth = 1.9;
+    ctx.stroke();
+    ctx.restore();
+    // 中心点
+    ctx.beginPath();
+    ctx.fillStyle = 'rgba(200,240,255,' + (0.65 + pulse * 0.35).toFixed(2) + ')';
+    ctx.arc(cx, cy, 2.6, 0, Math.PI * 2);
+    ctx.fill();
+    // 十字准线
+    ctx.strokeStyle = 'rgba(56,189,248,.16)';
+    ctx.beginPath();
+    ctx.moveTo(cx - 168, cy); ctx.lineTo(cx - 44, cy);
+    ctx.moveTo(cx + 44, cy); ctx.lineTo(cx + 168, cy);
+    ctx.moveTo(cx, cy - 168); ctx.lineTo(cx, cy - 44);
+    ctx.stroke();
+  }
+
+  function frame(now){
+    if (!alive) return;
+    const t = now - t0;
+    ctx.clearRect(0, 0, W, H);
+    grid(t);
+    ring(206 * scale, { alpha: .16 });
+    ring(156 * scale, { dash: 2, gap: 7, rot: -t * 0.00016, alpha: .34 });
+    ring(112 * scale, { rot: t * 0.00022, alpha: .45, w: 1.2 });
+    ticks(206 * scale, 60, 6 * scale, .26, t * 0.00010);
+    ticks(112 * scale, 24, 5 * scale, .40, -t * 0.00018);
+    sweep(t * 0.0011, 156 * scale);
+    // 读数点
+    for (const b of blips){
+      b.life += 0.006;
+      const on = Math.sin(b.life * Math.PI * 2) > 0.72;
+      if (!on) continue;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(190,235,255,.85)';
+      ctx.arc(cx + Math.cos(b.a) * b.r * scale, cy + Math.sin(b.a) * b.r * scale, 1.7, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 粒子
+    for (const p of parts){
+      p.r -= p.v;
+      if (p.r < 92 * scale){ p.r = (430 + Math.random() * 60) * scale; p.a = Math.random() * Math.PI * 2; }
+      const x = cx + Math.cos(p.a) * p.r, y = cy + Math.sin(p.a) * p.r;
+      const a = Math.min(1, (p.r - 92 * scale) / (160 * scale)) * 0.78;
+      ctx.beginPath();
+      ctx.fillStyle = 'rgba(125,211,252,' + a.toFixed(3) + ')';
+      ctx.arc(x, y, p.s, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // 一道很淡的横向扫描带，从上往下慢慢走
+    const scanY = ((t * 0.06) % (H + 260)) - 130;
+    const sg = ctx.createLinearGradient(0, scanY - 70, 0, scanY + 70);
+    sg.addColorStop(0, 'rgba(56,189,248,0)');
+    sg.addColorStop(.5, 'rgba(56,189,248,.055)');
+    sg.addColorStop(1, 'rgba(56,189,248,0)');
+    ctx.fillStyle = sg;
+    ctx.fillRect(0, scanY - 70, W, 140);
+    core(t, t / 1500);
+    raf = requestAnimationFrame(frame);
+  }
+
+  if (reduce){
+    frame(t0 + 700); // 只画一帧
+    cancelAnimationFrame(raf);
+  } else {
+    raf = requestAnimationFrame(frame);
+  }
+  window.__spStop = () => { alive = false; cancelAnimationFrame(raf); };
+})();
+
+// 开屏控制器：把自检日志一行行打出来，数据到了再收。
+// 视觉（环/扫描/粒子）在 spCanvas 那个 IIFE 里，这里只管节拍和退场。
 (function splash(){
-  const el = document.getElementById("splash");
+  const el = document.getElementById('splash');
   if (!el) return;
-  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
-  const MIN = reduce ? 200 : 900;
-  const t0 = Date.now();
-  let done = false;
+  const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  const MIN = reduce ? 220 : 1400;      // 最短停留
+  const MAX = reduce ? 600 : 3400;      // 兜底
+  const t0 = performance.now();
   const cfg = window.LIVE_CFG || {};
-  const orb = document.getElementById("spOrb");
-  const name = document.getElementById("spName");
-  if (name && cfg.agent) name.textContent = cfg.agent;
+  const nameEl = document.getElementById('spName');
+  const boot = document.getElementById('spBoot');
+  const bar = document.getElementById('spBar');
+  const pct = document.getElementById('spPct');
+  if (nameEl && cfg.agent) nameEl.textContent = cfg.agent;
+
+  const LINES = [
+    ['加载账本读取器', 'state/*.jsonl'],
+    ['挂载会话状态', 'social-v2'],
+    ['校验 token 账本', 'token-usage'],
+    ['接通实时流', 'sse'],
+    ['就绪', 'waiting data'],
+  ];
+  let step = 0, progress = 0, dataReady = false, done = false;
+
+  function setProgress(p){
+    progress = Math.max(progress, Math.min(100, Math.round(p)));
+    bar.style.width = progress + '%';
+    pct.textContent = progress + '%';
+  }
+  function pushLine(i){
+    const [label, tail] = LINES[i];
+    const ok = i < LINES.length - 1;
+    const d = document.createElement('div');
+    d.style.animationDelay = '0ms';
+    d.innerHTML = '<i>' + (ok ? '✓' : '·') + '</i> ' + label + ' <b>' + tail + '</b>';
+    boot.appendChild(d);
+    while (boot.children.length > 5) boot.removeChild(boot.firstChild);
+  }
+  function tick(){
+    if (done) return;
+    if (step < LINES.length){
+      pushLine(step);
+      step += 1;
+      setProgress(12 + step * 14);
+      setTimeout(tick, reduce ? 30 : 200);
+      return;
+    }
+    // 日志打完，等数据
+    const waitStart = performance.now();
+    const poll = () => {
+      if (done) return;
+      if (document.querySelector('#list .ev') || window.__lastMeta) dataReady = true;
+      if (dataReady) setProgress(progress + (100 - progress) * 0.35);
+      const waited = performance.now() - waitStart;
+      if (dataReady && (performance.now() - t0) >= MIN){ hide(); return; }
+      if (waited > MAX - 900){ setProgress(100); hide(); return; }
+      setTimeout(poll, 90);
+    };
+    poll();
+  }
   function hide(){
     if (done) return;
     done = true;
-    const wait = Math.max(0, MIN - (Date.now() - t0));
-    setTimeout(() => { el.classList.add("gone"); setTimeout(() => el.remove(), 520); }, wait);
+    setProgress(100);
+    const wait = Math.max(0, MIN - (performance.now() - t0));
+    setTimeout(() => {
+      el.classList.add('flash');
+      setTimeout(() => el.classList.add('gone'), reduce ? 0 : 180);
+      setTimeout(() => { if (window.__spStop) window.__spStop(); el.remove(); }, reduce ? 120 : 900);
+    }, wait);
   }
-  const timer = setInterval(() => {
-    if (document.querySelector("#list .ev") || window.__lastMeta) { clearInterval(timer); hide(); }
-  }, 120);
-  setTimeout(() => { clearInterval(timer); hide(); }, 2500);
+  setTimeout(tick, reduce ? 0 : 220);
+  setTimeout(() => { setProgress(100); hide(); }, MAX);
 })();
+
 </script>
 </body>
 </html>
