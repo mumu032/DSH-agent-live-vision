@@ -25,6 +25,18 @@
   html{color-scheme:dark}
   *{box-sizing:border-box}
   html,body{height:100%}
+  /* 2026-11-01 动态视觉：一层极慢漂移的极光，别抢内容 */
+  body::before{content:'';position:fixed;inset:-12%;z-index:0;pointer-events:none;
+    background:
+      radial-gradient(46% 38% at 18% 12%, rgba(56,189,248,.10), transparent 70%),
+      radial-gradient(42% 34% at 82% 22%, rgba(167,139,250,.085), transparent 72%),
+      radial-gradient(50% 40% at 52% 96%, rgba(56,189,248,.06), transparent 74%);
+    animation: aurora 46s ease-in-out infinite alternate;}
+  @keyframes aurora{
+    0%{transform:translate3d(-1.5%,-1%,0) scale(1)}
+    50%{transform:translate3d(1.2%,1.4%,0) scale(1.04)}
+    100%{transform:translate3d(-.6%,2%,0) scale(1.01)}
+  }
   body{
     margin:0;
     background:
@@ -117,6 +129,11 @@
   }
   @media (max-width:900px){.wrap{grid-template-columns:1fr}.rail:first-child{order:0}}
 
+  .card.flash{animation: cardFlash .9s ease-out}
+  @keyframes cardFlash{
+    0%{box-shadow:0 0 0 1px rgba(56,189,248,.55),0 0 26px -6px rgba(56,189,248,.5)}
+    100%{box-shadow:0 0 0 1px rgba(148,163,184,.10),0 10px 30px -18px #000}
+  }
   .card{
     background:linear-gradient(180deg,#121c2ef2,#0b1220e0);
     border:1px solid var(--line);border-radius:var(--r);
@@ -128,6 +145,7 @@
   .rail > .card:nth-child(1){animation-delay:.02s}
   .rail > .card:nth-child(2){animation-delay:.08s}
   @keyframes cardin{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:none}}
+  @keyframes barFlow{0%{background-position:0 0}50%{background-position:0 100%}100%{background-position:0 0}}
   .card h2{
     margin:0;padding:12px 16px;font-size:11.5px;font-weight:700;letter-spacing:1.6px;
     color:var(--dim);text-transform:uppercase;
@@ -135,7 +153,7 @@
     display:flex;align-items:center;gap:9px;
     background:linear-gradient(180deg,#ffffff05,transparent);
   }
-  .card h2::before{
+  .card h2::before{background-size:100% 240%;animation:barFlow 9s linear infinite;
     content:"";width:3px;height:11px;border-radius:2px;flex:none;
     background:linear-gradient(180deg,var(--accent),#2563eb);
     box-shadow:0 0 10px -2px var(--accent);
@@ -175,6 +193,8 @@
     background:linear-gradient(90deg,#34d399,#22d3ee);
     box-shadow:0 0 12px -2px #22d3ee99;transition:width .7s cubic-bezier(.4,0,.2,1)}
   .bar.warn>i{background:linear-gradient(90deg,#f59e0b,#f97316);box-shadow:0 0 12px -2px #f9731699}
+  .bump{animation: bump .7s cubic-bezier(.22,1,.36,1)}
+  @keyframes bump{0%{transform:none}28%{transform:translateY(-2px) scale(1.12);color:#bff0ff}100%{transform:none}}
   .kv{padding:11px 16px;display:flex;justify-content:space-between;font-size:12.5px;border-top:1px solid #16203399}
   .kv span{color:var(--dim)}
   .kv b{font-weight:600}
@@ -268,6 +288,13 @@
   .newpill.on{display:block;animation:slidein .3s ease}
   .newpill:hover{border-color:#4d8dff}
 
+  .ev.new .stripe{box-shadow:0 0 14px 0 currentColor;animation: stripeFlash 1.1s ease-out}
+  .ev.new .bd{animation: rowGlow 1.5s ease-out}
+  @keyframes rowGlow{
+    0%{background:linear-gradient(90deg,rgba(56,189,248,.16),rgba(56,189,248,0) 70%)}
+    100%{background:transparent}
+  }
+  @keyframes stripeFlash{from{filter:brightness(2.4)}to{filter:none}}
   .ev{display:grid;grid-template-columns:56px 4px 1fr;gap:0 11px;padding:6px 16px 6px 13px;
     position:relative;align-items:start;transition:background .15s}
   .ev:hover{background:linear-gradient(90deg,#13203a,#0d1524)}
@@ -323,6 +350,10 @@
   .hours .h.on{background:linear-gradient(180deg,#4ea8f5,#1d4ed8);box-shadow:0 0 14px -6px #38bdf8}
   .hours .h.now{background:linear-gradient(180deg,#fbbf24,#f97316);box-shadow:0 0 18px -6px #f97316}
   .hours .h.sel{background:linear-gradient(180deg,#b39bfa,#6d28d9);box-shadow:0 0 0 1px #a78bfaaa, 0 0 18px -4px #a78bfa}
+  .hours .h.now{animation: hourPulse 2.6s ease-in-out infinite}
+  @keyframes hourPulse{0%,100%{filter:none}50%{filter:brightness(1.3) drop-shadow(0 0 9px rgba(251,146,60,.6))}}
+  .hstat .dot.live{animation: dotBreath 2.8s ease-in-out infinite}
+  @keyframes dotBreath{0%,100%{box-shadow:0 0 0 0 rgba(52,211,153,.45)}55%{box-shadow:0 0 0 5px rgba(52,211,153,0)}}
   .hours .h:hover{filter:brightness(1.22)}
   .hours .h span{position:absolute;bottom:-17px;left:50%;transform:translateX(-50%);font-size:9px;color:var(--dim2)}
   .hours .h b{position:absolute;top:-19px;left:50%;transform:translateX(-50%);font-size:10px;color:#cbd5e1;
@@ -339,6 +370,7 @@
   .plat .d{width:7px;height:7px;border-radius:50%;flex:none;box-shadow:0 0 9px -1px currentColor}
   .plat .c{font-size:13px;font-weight:700;color:#cbd5e1;font-variant-numeric:tabular-nums}
   .plat .m{grid-column:1/-1;font-size:11px;color:var(--dim2);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .plat .mini i{transition:width .55s cubic-bezier(.22,1,.36,1)}
   .plat .mini{grid-column:1/-1;height:4px;border-radius:99px;background:#101a2b;overflow:hidden;margin-top:4px;
     box-shadow:inset 0 1px 1px #0007}
   .plat .mini>i{display:block;height:100%;border-radius:99px;transition:width .6s cubic-bezier(.4,0,.2,1)}
@@ -356,6 +388,10 @@
     font-family:"JetBrains Mono",ui-monospace,Consolas,monospace}
 
   @media (prefers-reduced-motion: reduce){
+  body::before{animation:none}
+  .ev.fresh,.bump,.hours .h.now,.hstat .dot.live,.card h2::before{animation:none!important}
+  .plat .mini i{transition:none}
+
     *,*::before,*::after{animation-duration:.001ms !important;transition-duration:.001ms !important}
   }
 
@@ -505,6 +541,10 @@
   .sp-boot{font-size:10.5px}
 }
 @media (prefers-reduced-motion: reduce){
+  body::before{animation:none}
+  .ev.fresh,.bump,.hours .h.now,.hstat .dot.live,.card h2::before{animation:none!important}
+  .plat .mini i{transition:none}
+
   .sp-name,.sp-tag,.sp-boot div{animation:none;opacity:1}
   #splash.flash::after{animation:none;opacity:0}
 }
@@ -848,7 +888,16 @@ function updatePill(){
   pill.classList.toggle('on', S.paused);
 }
 
+function flashFeedCard(){
+  if(window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
+  const card = document.querySelector('#list')?.closest('.card');
+  if(!card) return;
+  card.classList.remove('flash');
+  void card.offsetWidth;
+  card.classList.add('flash');
+}
 function onNewEvents(ids){
+  flashFeedCard();
   // 已经在往回翻 → 不刷列表，只记账，等他自己点回顶
   if(S.paused){ S.pending += ids.size; updatePill(); return; }
   renderFeed(ids);
@@ -917,6 +966,18 @@ function renderToday(){
   }
 }
 
+const REDUCE = () => window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+function setNum(id, val){
+  const el = $(id);
+  if(!el) return;
+  const s = String(val);
+  if(el.textContent === s) return;
+  el.textContent = s;
+  if(REDUCE()) return;
+  el.classList.remove('bump');
+  void el.offsetWidth;
+  el.classList.add('bump');
+}
 function renderMeta(){
   const m = meta;
   const q = m.qq || { online: true };
@@ -925,11 +986,12 @@ function renderMeta(){
     qd.style.background = q.online ? 'var(--ok, #34d399)' : '#f87171';
     qt.textContent = q.online ? '数据源已连' : '数据源断开';
     qt.style.color = q.online ? '' : '#f87171';
+    qd.classList.toggle('live', !!q.online);
   }
   window.__lastMeta = m;   // 顶部弹层要用
-  $('hTool').textContent = m.tool24 ?? 0;
-  $('hTok').textContent = kfmt(Math.round(m.tokens?.billable||0));
-  $('kvTool').textContent = m.tool24 ?? 0;
+  setNum('hTool', m.tool24 ?? 0);
+  setNum('hTok', kfmt(Math.round(m.tokens?.billable||0)));
+  setNum('kvTool', m.tool24 ?? 0);
 
   // 会话：她手上几个口子各自什么状态（不显示消息内容）
   const CNAME = {
