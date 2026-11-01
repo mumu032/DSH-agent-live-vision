@@ -1172,6 +1172,8 @@ function ekgState(now){
   target += Math.min(34, n60 * 7);          // 这一分钟动得越多跳得越快
   target += Math.min(14, Math.floor(n300 / 4));
   if (chatting) target += 12;
+  // 就算一动不动，人躺着的心率也在 60~72 之间慢慢飘（呼吸 + 一点随机），别钉死在一个数上
+  target += 2.9 * Math.sin(now / 8600) + 1.7 * Math.sin(now / 3100) + 1.0 * Math.sin(now / 1300);
   target = Math.max(48, Math.min(112, target));
   let label = inSleep ? "睡着" : "安静";
   if (target >= 96) label = "忙起来了";
@@ -1194,7 +1196,7 @@ function ekgPulse(dt, sh){
 function ekgStep(now){
   const st = ekgState(now);
   // 心率缓一点地追，不要一条消息就蹦上去
-  EKG.hr += (st.target - EKG.hr) * 0.05;
+  EKG.hr += (st.target - EKG.hr) * 0.075;
   if(!EKG.nextAt) EKG.nextAt = now - EKG.span;   // 首帧把整个窗口补满，别一打开是一条平线
   const period = 60000 / Math.max(40, EKG.hr);
   let guard = 400;
