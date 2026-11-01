@@ -344,6 +344,19 @@
   .hours{display:flex;align-items:flex-end;gap:3px;height:64px;margin-top:4px;position:relative;
     background:repeating-linear-gradient(to top,#ffffff08 0 1px,transparent 1px 21px);
     border-bottom:1px solid #1b2740;padding-bottom:1px}
+  /* 心电图：最近 3 分钟的"心跳"，每来一条事件就跳一下 */
+  .ekg{position:relative;height:76px;margin:2px 0 12px;border-radius:10px;overflow:hidden;
+    background:radial-gradient(130% 110% at 50% 0%, #0a1526 0%, #060c16 72%);
+    box-shadow:inset 0 0 0 1px #14243a, inset 0 -20px 34px -22px #38bdf8}
+  .ekg canvas{display:block;width:100%;height:100%}
+  @media (prefers-reduced-motion: reduce){ .ekg .lead{display:none} }
+  .ekg .hud{position:absolute;left:11px;top:7px;display:flex;align-items:baseline;gap:7px;
+    font-size:10.5px;color:#5f7f9e;letter-spacing:.04em;pointer-events:none}
+  .ekg .hud b{font-family:"JetBrains Mono",ui-monospace,Consolas,monospace;font-size:13px;color:#7ef0c0;
+    letter-spacing:0;text-shadow:0 0 10px rgba(126,240,192,.55)}
+  .ekg .hud .w{color:#41607d}
+  .ekg .lead{position:absolute;right:10px;bottom:7px;font-size:10px;color:#41607d;letter-spacing:.08em;
+    pointer-events:none}
   .hours .h{flex:1;background:linear-gradient(180deg,#22304a,#1a2438);border-radius:4px 4px 0 0;
     position:relative;min-height:2px;transition:height .5s cubic-bezier(.4,0,.2,1),background .2s;
     cursor:pointer;outline:none}
@@ -636,6 +649,11 @@
     <div class="card">
       <h2>今天的心跳 <span class="n" id="heartSum"></span></h2>
       <div class="heart">
+        <div class="ekg">
+          <canvas id="ekg"></canvas>
+          <div class="hud"><b id="ekgBpm">–</b><span>次/分</span><span class="w">· 近 3 分钟 <i id="ekgCnt">0</i> 次</span></div>
+          <div class="lead">LIVE</div>
+        </div>
         <div class="hours" id="hours"></div>
         <div class="hax"><span>0 点</span><span>6</span><span>12</span><span>18</span><span>23 点</span></div>
       </div>
@@ -1130,6 +1148,120 @@ function renderPlats(){
   $('platTag').textContent = '近 24 小时';
 }
 
+// ---------- 心电图（2026-11-01：产品方要"心跳心电图"那种动态） ----------
+const EKG = { span: 180000, raf: 0, last: 0 };
+function ekgPulse(dt, amp){
+  // dt 毫秒；一次心跳 = P 波 + QRS 波群 + T 波，越接近 0 越尖
+  if(dt < -140 || dt > 420) return 0;
+  var v = 0;
+  if(dt >= -150 && dt < -60) v += 0.11 * Math.sin((dt + 150) / 90 * Math.PI);   // P
+  if(dt >= -60  && dt < -8)  v -= 0.18 * Math.sin((dt + 60) / 52 * Math.PI);   // Q
+  if(dt >= -8   && dt < 30)  v += 1.15 * Math.sin((dt + 8) / 38 * Math.PI);    // R
+  if(dt >= 30   && dt < 88)  v -= 0.36 * Math.sin((dt - 30) / 58 * Math.PI);   // S
+  if(dt >= 140  && dt < 330) v += 0.20 * Math.sin((dt - 140) / 190 * Math.PI); // T
+  return v * amp;
+}
+const EKG_PERIOD = 60000 / 72;   // 72 次/分：安静的底子
+function ekgBeats(now){
+  const from = now - EKG.span - 600;
+  const beats = [];
+  // ① 模拟心跳（始终有，像监护仪不会是一条死线）
+  const k0 = Math.floor(from / EKG_PERIOD);
+  const k1 = Math.ceil(now / EKG_PERIOD);
+  for (let k = k0; k <= k1; k++) beats.push({ t: k * EKG_PERIOD, a: 0.78, sim: true });
+  // ② 她真动过的每一刻，叠一记更明显的
+  for (const e of S.events) {
+    if (e.t < from) continue;
+    const strong = e.kind !== "sys";
+    beats.push({ t: e.t, a: strong ? 1.5 : 0.75, sim: false, fail: !!e.fail });
+  }
+  return beats.sort(function (x, y) { return x.t - y.t; });
+}
+function drawEkg(){
+  const cv = $("ekg");
+  if(!cv) return;
+  const rect = cv.getBoundingClientRect();
+  const w = Math.max(180, Math.round(rect.width));
+  const hh = Math.max(40, Math.round(rect.height));
+  const dpr = Math.min(2, window.devicePixelRatio || 1);
+  if(cv.width !== Math.round(w * dpr) || cv.height !== Math.round(hh * dpr)){
+    cv.width = Math.round(w * dpr); cv.height = Math.round(hh * dpr);
+  }
+  const g = cv.getContext("2d");
+  g.setTransform(dpr, 0, 0, dpr, 0, 0);
+  g.clearRect(0, 0, w, hh);
+  const now = Date.now();
+  const span = EKG.span;
+  const yb = hh * 0.66;
+  const amp = hh * 0.52;
+  // 背景细网格（每 15 秒一条竖线，像监护仪）
+  g.strokeStyle = "rgba(56,189,248,.07)";
+  g.lineWidth = 1;
+  const step = w / (span / 15000);
+  for(let x = w % step; x < w; x += step){
+    g.beginPath(); g.moveTo(Math.round(x) + .5, 6); g.lineTo(Math.round(x) + .5, hh - 6); g.stroke();
+  }
+  g.strokeStyle = "rgba(56,189,248,.09)";
+  for(let i = 0; i < 4; i++){
+    const y = Math.round(6 + (hh - 12) * i / 3) + .5;
+    g.beginPath(); g.moveTo(0, y); g.lineTo(w, y); g.stroke();
+  }
+  // 基线（有一点很轻的漂移，别像尺子画的）
+  const beats = ekgBeats(now);
+  const pts = [];
+  for(let x = 0; x <= w; x += 1.5){
+    const t = now - span + (x / w) * span;
+    let v = 0;
+    for(let i = beats.length - 1; i >= 0; i--){
+      const b = beats[i];
+      const dt = t - b.t;
+      if(dt > 420) break;
+      if(dt >= -140) v += ekgPulse(dt, b.a);
+    }
+    const n = Math.sin(x * 12.9898) * 43758.5453;
+    v += 0.022 * Math.sin(t / 1700) + (n - Math.floor(n) - 0.5) * 0.005;
+    pts.push([x, yb - v * amp]);
+  }
+  // 三点平滑：把逐像素的毛刺压掉，线看起来是"笔画的"不是"抖的"
+  for (let i = 1; i < pts.length - 1; i++) pts[i][1] = (pts[i - 1][1] + pts[i][1] * 2 + pts[i + 1][1]) / 4;
+  // 辉光层 + 实线层
+  function stroke(color, width, blur){
+    g.save();
+    g.beginPath();
+    g.moveTo(pts[0][0], pts[0][1]);
+    for(let i = 1; i < pts.length; i++) g.lineTo(pts[i][0], pts[i][1]);
+    g.strokeStyle = color; g.lineWidth = width; g.lineJoin = "round"; g.lineCap = "round";
+    g.shadowColor = "rgba(126,240,192,.85)"; g.shadowBlur = blur;
+    g.stroke(); g.restore();
+  }
+  stroke("rgba(52,211,153,.30)", 5.5, 16);
+  stroke("rgba(126,240,192,.95)", 1.7, 6);
+  // 最右端的笔尖 + 一点余晖
+  const lastP = pts[pts.length - 1];
+  const lg = g.createRadialGradient(lastP[0], lastP[1], 0, lastP[0], lastP[1], 12);
+  lg.addColorStop(0, "rgba(180,255,225,.95)");
+  lg.addColorStop(1, "rgba(126,240,192,0)");
+  g.fillStyle = lg;
+  g.beginPath(); g.arc(lastP[0], lastP[1], 12, 0, Math.PI * 2); g.fill();
+  // 右上角读数：近 60 秒跳了几次
+  const bpm = Math.round(beats.filter(function (b) { return now - b.t <= 60000 && !b.sim; }).length * 1);
+  const el = $("ekgBpm");
+  const shown = bpm > 0 ? String(bpm + 72) : "72";
+  if(el && el.textContent !== shown) el.textContent = shown;
+  const cnt = $("ekgCnt");
+  const n3 = beats.filter(function (b) { return !b.sim && now - b.t <= EKG.span; }).length;
+  if(cnt && cnt.textContent !== String(n3)) cnt.textContent = String(n3);
+}
+function ekgLoop(){
+  drawEkg();
+  EKG.raf = requestAnimationFrame(ekgLoop);
+}
+function startEkg(){
+  const reduce = window.matchMedia && window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+  if(reduce){ drawEkg(); return; }
+  if(EKG.raf) return;
+  ekgLoop();
+}
 function renderHeart(){
   const hr = meta.hourly||new Array(24).fill(0);
   const max = Math.max(1,...hr);
@@ -1288,6 +1420,11 @@ function connect(){
   es.onerror = ()=>{ $('banner').classList.add('on'); $('dot').className='dot sleep'; };
 }
 connect();
+startEkg();
+document.addEventListener('visibilitychange', function(){
+  if(document.hidden){ if(EKG.raf){ cancelAnimationFrame(EKG.raf); EKG.raf = 0; } }
+  else startEkg();
+});
 
 // 顶部两枚可点的胶囊（2026-10-31：之前只有 hover 高亮、点了没反应）
 // 注意：只能绑一次。之前这段被放在时钟 setInterval 里，每秒重绑一次，
