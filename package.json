@@ -4,13 +4,16 @@
   "description": "A read-only live dashboard for what your AI agent is actually doing — built from its own JSONL ledgers.",
   "type": "module",
   "bin": {
-    "agent-live": "./server.mjs"
+    "agent-live": "./server.mjs",
+    "agent-autonomy": "./packages/autonomy/src/daemon.mjs"
   },
   "scripts": {
     "start": "node server.mjs",
     "demo": "node server.mjs --demo",
     "fixtures": "node fixtures/generate.mjs",
-    "test:autonomy": "node --test packages/autonomy/test/scheduler.test.mjs"
+    "test:autonomy": "node --test packages/autonomy/test/scheduler.test.mjs",
+    "autonomy": "node packages/autonomy/src/daemon.mjs",
+    "autonomy:test": "node --test packages/autonomy/test/scheduler.test.mjs"
   },
   "engines": {
     "node": ">=18"

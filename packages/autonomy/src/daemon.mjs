@@ -19,8 +19,10 @@
 //   --once            算一轮就退出
 //   --webhook <url>   有决定时 POST {key,reason,why,prompt}
 //   --dry             只打印，不写文件、不发请求
+//   --demo            用包里自带的假数据跑一轮（npx 一行就能看效果）
 
 import fs from 'node:fs';
+import os from 'node:os';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 import { DEFAULTS, pickReason, applyDecision, trimState, nextCheckDelayMs, inSleepWindow } from './scheduler.mjs';
@@ -34,9 +36,12 @@ const arg = (k, d) => {
 };
 const flag = (k) => argv.includes(k);
 
-const cfgPath = path.resolve(arg('--config', path.join(HERE, '..', 'config.json')));
-const statePath = path.resolve(arg('--state', path.join(HERE, '..', 'state', 'scheduler-state.json')));
-const convPath = path.resolve(arg('--conv', path.join(HERE, '..', 'state', 'conversations.json')));
+// --demo：用包里自带的那份假数据跑一遍，方便 'npx … --demo' 一行看到效果
+const DEMO = flag('--demo');
+const FIX = path.join(HERE, '..', 'fixtures');
+const cfgPath = path.resolve(arg('--config', DEMO ? path.join(FIX, 'config.json') : path.join(HERE, '..', 'config.json')));
+const statePath = path.resolve(arg('--state', DEMO ? path.join(os.tmpdir(), 'agent-autonomy-demo-state.json') : path.join(HERE, '..', 'state', 'scheduler-state.json')));
+const convPath = path.resolve(arg('--conv', DEMO ? path.join(FIX, 'conversations.json') : path.join(HERE, '..', 'state', 'conversations.json')));
 const webhook = arg('--webhook', '');
 const once = flag('--once');
 const dry = flag('--dry');
