@@ -616,6 +616,55 @@ function tokensTodayRaw() {
     }
   };
 }
+// 她最近写下的：日记、知识本、还惦记着的事（都给「今天」和「最近」两个口径）
+function herWrites() {
+  const day0 = todayStart();
+  const out = {
+    diary: { today: 0, total: 0, lastAt: 0, lastText: '' },
+    knowledge: { total: 0, today: 0, lastTitle: '', lastAt: 0 },
+    wants: { open: 0, oldest: '', oldestAt: 0 },
+  };
+  // 日记：data/日记/diary.jsonl，一行一条 { time:"2026-11-01 11:01", mood, text, conv }
+  try {
+    const raw = fs.readFileSync(path.join(ROOT, 'data', '日记', 'diary.jsonl'), 'utf8');
+    for (const line of raw.split(/\r?\n/)) {
+      if (!line.trim()) continue;
+      let r; try { r = JSON.parse(line); } catch { continue; }
+      out.diary.total++;
+      const t = Date.parse(String(r.time || '').replace(' ', 'T'));
+      if (Number.isFinite(t)) {
+        if (t >= day0) out.diary.today++;
+        if (t >= out.diary.lastAt) { out.diary.lastAt = t; if (r.text) out.diary.lastText = String(r.text); }
+      } else if (r.text) {
+        out.diary.lastText = String(r.text);
+      }
+    }
+  } catch {}
+  // 知识本：data/knowledge/*.md，用文件 mtime 判断「今天新增」
+  try {
+    const dir = path.join(ROOT, 'data', 'knowledge');
+    for (const f of fs.readdirSync(dir)) {
+      if (!f.toLowerCase().endsWith('.md')) continue;
+      let st; try { st = fs.statSync(path.join(dir, f)); } catch { continue; }
+      out.knowledge.total++;
+      if (st.mtimeMs >= day0) out.knowledge.today++;
+      if (st.mtimeMs > out.knowledge.lastAt) { out.knowledge.lastAt = st.mtimeMs; out.knowledge.lastTitle = f.replace(/\.md$/i, ''); }
+    }
+  } catch {}
+  // 还惦记着：data/state/wants.json，按会话分组，每个会话 items[]
+  try {
+    const j = readJsonSafe(path.join(ROOT, 'data', 'state', 'wants.json')) || {};
+    for (const v of Object.values(j)) {
+      for (const it of (v && v.items) || []) {
+        if (!it || it.status !== 'open') continue;
+        out.wants.open++;
+        const t = Date.parse(it.createdAt) || 0;
+        if (!out.wants.oldestAt || (t && t < out.wants.oldestAt)) { out.wants.oldestAt = t; out.wants.oldest = String(it.text || ''); }
+      }
+    }
+  } catch {}
+  return out;
+}
 function selfTimeToday() {
   const day0 = todayStart();
   let n = 0;
@@ -807,6 +856,7 @@ function meta() {
     qq: { online: qqLink.online, at: qqLink.at, lastError: qqLink.lastError },
     selfTime: { today: selfTimeToday(), lastAt: lastOutingAt(), budget: Number(T.selfTimeTokensPerDay) || 200000 },
     sleep: sleepMeta(),
+    writes: herWrites(),
     explore: exploreGate(),
     lastEventAt: events.length ? events[events.length - 1].t : 0,
   };

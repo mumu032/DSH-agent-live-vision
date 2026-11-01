@@ -6,3 +6,9 @@
 12:30:12 [bridge] [group-review] group:20000003 注入一条复盘
 12:30:13 [bridge] [reserved2] 主动机会命中 group:20000003（主动找人说话）
 14:30:22 [bridge] [reserved2] 主动机会未出手 private:10000001：这次没掷中（概率 0.30）
+15:00:03 [bridge] [reserved2] 好奇心机会命中 private:10000001（自己的时间）
+18:02:09 [bridge] [day-life] 注入 318 字
+19:10:01 [bridge] [reserved2] 好奇心机会命中 private:10000001（自己的时间）
+20:30:55 [bridge] [study] 上次自学交了作业（知识本 12 篇 → 13 篇）
+20:30:56 [bridge] [memory-graph] 召回 6 条 / 604 字
+21:15:18 [bridge] 唤醒 private:10000001（explore）

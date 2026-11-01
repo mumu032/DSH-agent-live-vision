@@ -147,4 +147,38 @@ const log = [
 ].filter((l) => Number(l.slice(0, 2)) <= nowH + 1).join('\n');
 W('bridge.out.log', log + '\n');
 
+
+// —— 「她最近写下的」那张卡要读的三样东西，也给一份假的 ——
+const dayStr = (h, m) => {
+  const d = at(h, m);
+  const p = (n) => String(n).padStart(2, '0');
+  return d.getFullYear() + '-' + p(d.getMonth() + 1) + '-' + p(d.getDate()) + ' ' + p(d.getHours()) + ':' + p(d.getMinutes());
+};
+const diaries = [
+  { time: dayStr(9, 12), mood: '有点闷', text: '早上把窗推开，楼下有人在收衣服。风是潮的，晾不干，但那种潮味闻着安心。', conv: 'private:10000001' },
+  { time: dayStr(15, 40), mood: '慢慢松下来', text: '画了三张，只有第二张能看。第一张的颜色糊了，第三张光影是对的但人没有神。', conv: 'private:10000001' },
+  { time: dayStr(19, 5), mood: '有点困', text: '今天走了两趟路，一趟为了找咖啡豆，一趟没目的，就是想走走。', conv: 'group:20000002' },
+].filter((x) => at(Number(x.time.slice(11, 13)), 0).getTime() <= Date.now());
+W('data/日记/diary.jsonl', diaries.map((x) => JSON.stringify(x)).join('\n') + '\n');
+
+W('data/knowledge/冷萃为什么要泡那么久.md', '# 冷萃为什么要泡那么久\n\n因为低温萃取慢：同样多的味道，用冷水要 12~16 小时才出得来，用热水只要 4 分钟。\n');
+W('data/knowledge/画暗调：黑压过头会连主体一起吞掉.md', '# 画暗调：黑压过头会连主体一起吞掉\n\n暗部一旦低于某个亮度，轮廓就没了。留一点点反光，人才不会糊进背景里。\n');
+W('data/knowledge/雨天窗边的光.md', '# 雨天窗边的光\n\n阴天的光很软、方向不明，适合画情绪不适合画体积。要体积感就得自己造一盏。\n');
+
+W('data/state/wants.json', JSON.stringify({
+  'private:10000001': {
+    items: [
+      { id: 'w1', text: '搞明白冷萃为什么要泡那么久', why: '自己泡了一壶，第二天早上才敢喝', status: 'open', createdAt: iso(9, 12) },
+      { id: 'w2', text: '把窗边那盏灯画进一张画里', why: '阴天的光太软，想试试自己造光', status: 'done', createdAt: iso(10, 0), doneAt: iso(16, 44) },
+    ],
+    later: [],
+  },
+  'group:20000002': {
+    items: [
+      { id: 'w3', text: '学会做那种慢镜头一样的手书分镜', why: '看到一条短片，镜头一直在往前推', status: 'open', createdAt: iso(20, 30) },
+    ],
+    later: [],
+  },
+}, null, 2) + '\n');
+
 console.log('假数据已生成：', path.relative(process.cwd(), HERE));

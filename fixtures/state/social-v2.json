@@ -13,13 +13,13 @@
           "anyMessage": true,
           "probability": 0.3
         },
-        "lastWakeAt": 1793510100000,
+        "lastWakeAt": 1793538900000,
         "wakeCount": 12
       },
       "lastWakeReason": "explore",
       "unread": [],
-      "lastIncomingAt": 1793511600000,
-      "lastAiReplyAt": 1793510400000,
+      "lastIncomingAt": 1793540400000,
+      "lastAiReplyAt": 1793539200000,
       "exploreSentAt": [
         1793498700000,
         1793516400000,
@@ -40,7 +40,7 @@
           ],
           "probability": 0.08
         },
-        "lastWakeAt": 1793511600000,
+        "lastWakeAt": 1793536800000,
         "wakeCount": 3
       },
       "lastWakeReason": "probability",
@@ -49,10 +49,10 @@
           "seq": 1,
           "sender": "路人甲",
           "text": "周末去爬山吗",
-          "time": "2026-11-01T05:30:00.000Z"
+          "time": "2026-11-01T13:30:00.000Z"
         }
       ],
-      "lastIncomingAt": 1793511000000,
+      "lastIncomingAt": 1793539800000,
       "lastAiReplyAt": 0,
       "exploreSentAt": [],
       "proactiveSentAt": []
