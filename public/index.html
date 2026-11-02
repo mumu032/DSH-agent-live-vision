@@ -619,7 +619,7 @@
         </div>
       </div>
       <div class="bud">
-        <div class="row"><span>今天「自己出门」</span><span><b id="stTimes">0</b> / <b id="stCap">4</b> 次</span></div>
+        <div class="row"><span>今天「自己出门」</span><span><b id="stTimes">0</b> 次</span></div>
         <div class="bar" id="stBar"><i style="width:0%"></i></div>
         <div class="row" style="margin-top:5px;color:var(--dim2);font-size:11px"><span id="stBudget">预算 —</span></div>
         <div class="row" style="margin-top:9px;color:var(--dim2);line-height:1.5"><span id="stLast">—</span></div>
@@ -969,13 +969,14 @@ function renderToday(){
   const from = todayStart();
   const cnt = (fn) => S.events.filter(e => e.t >= from && fn(e)).length;
   const items = [
-    ['出门', meta.explore?.usedToday ?? 0],
+    ['出门', meta.explore?.walkedToday ?? meta.explore?.usedToday ?? 0],   // 跟上面那个大数字同口径：真出门几趟
     ['学到', cnt(e=>e.action==='学了一条')],
     ['日记', cnt(e=>e.action==='写日记')],
     ['说说', cnt(e=>e.action==='发QQ空间')],
   ];
   // 每个格子点一下就筛出对应的那些事（都是"今天"的事，所以顺手把时间也切到今天）
   const CELLQ = { '出门': '自己出门', '学到': '学了一条', '日记': '写日记', '说说': '发QQ空间' };
+  const CELLP = { '出门': 'self' };   // 出门按平台筛：self-time 那几条
   $('today').innerHTML = items.map(([k,v])=>{
     const on = S.q === CELLQ[k] ? ' on' : '';
     return `<div class="ms${on}" data-cell="${k}" title="只看今天的「${k}」"><b class="mono">${v}</b><span>${k}</span></div>`;
@@ -1090,14 +1091,14 @@ function renderMeta(){
   const ex = m.explore || {};
   const used = ex.usedToday ?? 0;
   const cap = ex.maxPerDay ?? 0;
-  $('stTimes').textContent = used;
-  $('stCap').textContent = cap;
+  // 大数字按「今天在外面真动过几趟」算，不用「派出去几次」——她自己刷两下也算出门
+  $('stTimes').textContent = ex.walkedToday ?? used;
   $('stBar').className = 'bar' + (cap && used >= cap ? ' warn' : '');
   $('stBar').firstElementChild.style.width = (cap ? Math.min(100, used / cap * 100) : 0).toFixed(1) + '%';
   const bud = ex.budget || {};
-  $('stBudget').textContent = `今天自己出门烧掉 ${Math.round((bud.spent || 0) / 1000)}k token / 预算 ${Math.round((bud.cap || 200000) / 1000)}k`;
+  $('stBudget').textContent = `今天派出去 ${used} 次 · 烧掉 ${Math.round((bud.spent || 0) / 1000)}k token / 预算 ${Math.round((bud.cap || 200000) / 1000)}k`;
   // 出门记录现在只看 self-time 账本（会话名属于 QQ，不显示）
-  const lastOut = m.selfTime?.lastAt || 0;
+  const lastOut = Math.max(ex.walkedAt || 0, m.selfTime?.lastAt || 0);
   $('stLast').textContent = lastOut ? `上次真出门：${ago(lastOut)}` : '这条账本里还没出过门';
   $('explainWhy').textContent = ex.enabled === false ? '「自己去各大平台玩」这个开关是关着的'
     : (ex.nextInMs == null ? '今天的出门额度用完了，等明天'
@@ -1105,7 +1106,7 @@ function renderMeta(){
         ? `她睡着了（${String(meta.sleep.startHour).padStart(2, '0')}:00–${String(meta.sleep.endHour).padStart(2, '0')}:00）：不主动找人、也不自己出门；被叫醒才会有反应`
         : (ex.inQuiet
           ? `现在是她的安静时段（${ex.quietStartHour}:00–${ex.quietEndHour}:00）：不主动找人说话，但自己出门只是概率降到 30%；${idleWord(ex.nextInMs)}够条件`
-          : `这会儿允许她自己出门（每次概率 ${Math.round((ex.probability || 0) * 100)}%）；${idleWord(ex.nextInMs)}够条件`)));
+          : `这会儿允许她自己出门（每次概率 ${Math.round((ex.probability || 0) * 100)}%，今天派过 ${used}/${cap} 次）；${idleWord(ex.nextInMs)}够条件`)));
 
   renderToday();
   renderPlats();

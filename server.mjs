@@ -733,6 +733,22 @@ function sleepMeta(now = Date.now()) {
   const inSleep = c.enabled !== false && start !== end && (start < end ? (h >= start && h < end) : (h >= start || h < end));
   return { enabled: c.enabled !== false, inSleep, startHour: start, endHour: end };
 }
+// 今天「自己出门」几趟：不看她有没有被派出门，只看她在别的平台上真动过没。
+// 同一趟：相邻两次动作间隔 ≤ 20 分钟；QQ 相关、待机、她自己那些内部动作都不算。
+const OUTING_PLATFORMS = new Set(['bili', 'heybox', 'music', 'qzone', 'draw', 'learn', 'work', 'eigenflux']);
+function outingWalksToday() {
+  const day0 = todayStart();
+  const ts = events
+    .filter((e) => e.kind === 'tool' && e.t >= day0 && OUTING_PLATFORMS.has(e.platform))
+    .map((e) => e.t)
+    .sort((a, b) => a - b);
+  let walks = 0, lastStart = 0, prev = 0;
+  for (const t of ts) {
+    if (!prev || t - prev > 20 * 60 * 1000) { walks++; lastStart = t; }
+    prev = t;
+  }
+  return { walks, lastStart };
+}
 function exploreGate() {
   const cfg = readJsonSafe(path.join(ROOT, 'config.json')) || {};
   const p = cfg.socialV2?.proactive ?? {};
@@ -794,6 +810,8 @@ function exploreGate() {
       ? null
       : (Math.max(sentToday, ledgerToday) >= maxPerDay ? null
         : (Number.isFinite(nearestIdle) ? nearestIdle : 0)),
+    walkedToday: outingWalksToday().walks,
+    walkedAt: outingWalksToday().lastStart,
     budget: (() => {
       const spent = selfTimeSpentToday();
       return { spent: Math.round(spent.tokens), sessions: spent.sessions, cap: Number(tunables().selfTimeTokensPerDay) || 200000 };
