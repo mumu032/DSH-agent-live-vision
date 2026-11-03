@@ -158,7 +158,9 @@ const diaries = [
   { time: dayStr(9, 12), mood: '有点闷', text: '早上把窗推开，楼下有人在收衣服。风是潮的，晾不干，但那种潮味闻着安心。', conv: 'private:10000001' },
   { time: dayStr(15, 40), mood: '慢慢松下来', text: '画了三张，只有第二张能看。第一张的颜色糊了，第三张光影是对的但人没有神。', conv: 'private:10000001' },
   { time: dayStr(19, 5), mood: '有点困', text: '今天走了两趟路，一趟为了找咖啡豆，一趟没目的，就是想走走。', conv: 'group:20000002' },
-].filter((x) => at(Number(x.time.slice(11, 13)), 0).getTime() <= Date.now());
+// 按「当天 23:59」截，而不是按此刻：否则早上跑 npm run fixtures 会少生成一大截，
+  // 同一份代码早上和晚上得到的 demo 内容不一样。
+].filter((x) => at(Number(x.time.slice(11, 13)), 0).getTime() <= at(23, 59).getTime());
 W('data/日记/diary.jsonl', diaries.map((x) => JSON.stringify(x)).join('\n') + '\n');
 
 W('data/knowledge/冷萃为什么要泡那么久.md', '# 冷萃为什么要泡那么久\n\n因为低温萃取慢：同样多的味道，用冷水要 12~16 小时才出得来，用热水只要 4 分钟。\n');

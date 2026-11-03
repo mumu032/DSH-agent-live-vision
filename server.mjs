@@ -21,6 +21,68 @@ const SELF_Q = (() => { try { return new URL(import.meta.url).searchParams; } ca
 // 结果连命令行跑的 node server.mjs 都变成了 demo 数据）。所以「显式给的 config」优先于环境里的 demo。
 const EXPLICIT_CONFIG = SELF_Q.get('config') || process.env.LIVE_CONFIG || process.argv.find((x) => x.startsWith('--config=')) || '';
 const DEMO_FLAG = process.argv.includes('--demo') || SELF_Q.get('demo') === '1' || (!EXPLICIT_CONFIG && process.env.AGENT_LIVE_DEMO === '1');
+// 示例账本里的时间写死在生成那天，隔几天再跑就全被 day0 过滤掉，页面看着像装坏了。
+// 这里把 fixtures 复制到临时目录、整份按天平移，让最新一条落在今天 —— 仓库里的文件一个都不动。
+const DEMO_CACHE = path.join(os.tmpdir(), 'agent-live-demo');
+const RE_ISO = /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z/g;
+const RE_LOCAL = /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/g;
+
+function walkFiles(dir, out = []) {
+  for (const ent of fs.readdirSync(dir, { withFileTypes: true })) {
+    const p = path.join(dir, ent.name);
+    if (ent.isDirectory()) walkFiles(p, out);
+    else if (/\.(jsonl|json|log|md|txt)$/i.test(ent.name)) out.push(p);
+  }
+  return out;
+}
+
+function demoShiftDays(dir) {
+  let newest = 0;
+  for (const f of walkFiles(dir)) {
+    const text = fs.readFileSync(f, 'utf8');
+    for (const m of text.matchAll(RE_ISO)) newest = Math.max(newest, Date.parse(m[0]));
+    for (const m of text.matchAll(RE_LOCAL)) newest = Math.max(newest, Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00'));
+  }
+  if (!newest) return 0;
+  const a = new Date(newest); a.setHours(0, 0, 0, 0);
+  const b = new Date(); b.setHours(0, 0, 0, 0);
+  return Math.round((b.getTime() - a.getTime()) / 86400000);
+}
+
+function shiftTimestamps(dir, days) {
+  const ms = days * 86400000;
+  const pad = (n) => String(n).padStart(2, '0');
+  const doIso = (s) => new Date(Date.parse(s) + ms).toISOString();
+  const doLocal = (m) => {
+    const d = new Date(Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00') + ms);
+    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+  };
+  for (const f of walkFiles(dir)) {
+    const text = fs.readFileSync(f, 'utf8');
+    const next = text.replace(RE_ISO, (s) => doIso(s)).replace(RE_LOCAL, (s, ...g) => doLocal([s, ...g]));
+    if (next !== text) fs.writeFileSync(f, next);
+  }
+}
+
+function demoRoot() {
+  const base = path.join(HERE, 'fixtures');
+  try {
+    const dayKey = new Date().toISOString().slice(0, 10);
+    const out = path.join(DEMO_CACHE, dayKey);
+    const stampFile = path.join(out, '.ready');
+    if (fs.existsSync(stampFile)) return out;
+    fs.rmSync(out, { recursive: true, force: true });
+    fs.mkdirSync(out, { recursive: true });
+    fs.cpSync(base, out, { recursive: true });
+    const shift = demoShiftDays(out);
+    if (shift) shiftTimestamps(out, shift);
+    fs.writeFileSync(stampFile, String(Date.now()));
+    return out;
+  } catch (e) {
+    return base;
+  }
+}
+
 function loadConfig() {
   const file = process.env.LIVE_CONFIG
     || SELF_Q.get('config')
@@ -31,10 +93,14 @@ function loadConfig() {
   const demo = DEMO_FLAG || !!cfg.demo;
   return {
     demo,
-    root: demo ? path.join(HERE, 'fixtures') : (cfg.root || process.cwd()),
-    bridgeLog: demo ? path.join(HERE, 'fixtures', 'bridge.out.log') : (cfg.bridgeLog || ''),
+    root: (() => { const r = demo ? demoRoot() : (cfg.root || process.cwd()); return r; })(),
+    bridgeLog: demo ? '' : (cfg.bridgeLog || ''),
     port: Number(process.env.LIVE_PORT || cfg.port || (demo ? 3112 : 3110)),
-    host: process.env.LIVE_HOST || cfg.host || '0.0.0.0',
+    // 默认只听 127.0.0.1：这页能看到日记正文、会话未读数、每次工具调用的参数。
+    // 想在手机上看，显式 --host=0.0.0.0 或 LIVE_HOST=0.0.0.0（启动时会打印风险提示）。
+    host: process.env.LIVE_HOST || cfg.host
+      || (process.argv.find((a) => a.startsWith('--host=')) || '').split('=')[1]
+      || '127.0.0.1',
     title: cfg.title || '实时探测台',
     agent: cfg.agent || '她',
     conversations: cfg.conversations || {},
@@ -43,6 +109,8 @@ function loadConfig() {
 }
 const CFG = loadConfig();
 const ROOT = CFG.root;
+// demo 的桥接日志跟着临时目录走；非 demo 没配就默认账本根下的 bridge.out.log
+if (!CFG.bridgeLog) CFG.bridgeLog = path.join(ROOT, 'bridge.out.log');
 const BRIDGE_LOG = CFG.bridgeLog;
 const PORT = CFG.port;
 // 只给本机看的时候用 127.0.0.1；要看手机就绑 0.0.0.0（LIVE_HOST 可覆盖）。
@@ -839,7 +907,14 @@ function meta() {
     if (e.t >= day0) byPlatformToday[e.platform] = (byPlatformToday[e.platform] || 0) + 1;
   }
   const hourly = Array(24).fill(0);
-  for (const e of events) if (e.t >= day0) hourly[new Date(e.t).getHours()]++;
+  const todayByPlatform = {};
+  let todayAll = 0;
+  for (const e of events) {
+    if (e.t < day0) continue;
+    hourly[new Date(e.t).getHours()]++;
+    todayAll++;
+    todayByPlatform[e.platform] = (todayByPlatform[e.platform] || 0) + 1;
+  }
   return {
     now: nowMs(),
     paused: !!social.paused,
@@ -847,6 +922,8 @@ function meta() {
     byPlatform,
     byPlatformToday,
     hourly,
+    todayAll,
+    todayByPlatform,
     tool24: events.filter((e) => e.kind === 'tool' && e.t >= day24).length,
     toolToday: events.filter((e) => e.kind === 'tool' && e.t >= day0).length,
     // 2026-10-31 04:1x：产品方只要实时流里别出现 QQ 内容，会话状态本身要留着（这张卡不算"监测消息"）
@@ -902,7 +979,8 @@ function serveImg(req, res) {
   const rel = decodeURIComponent(req.url.replace(/^\/img\//, ''));
   const base = path.join(ROOT, 'data', 'images');
   const full = path.resolve(base, rel);
-  if (!full.startsWith(path.resolve(base))) { res.writeHead(403).end(); return; }
+  const rel2 = path.relative(path.resolve(base), full);
+  if (!rel2 || rel2.startsWith('..') || path.isAbsolute(rel2)) { res.writeHead(403).end(); return; }
   fs.readFile(full, (err, buf) => {
     if (err) { res.writeHead(404).end('no image'); return; }
     const ext = path.extname(full).toLowerCase();
@@ -939,7 +1017,8 @@ function handle(req, res) {
   }
   if (url === '/api/snapshot') {
     res.writeHead(200, { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-cache' });
-    res.end(JSON.stringify({ events: events.slice(-400), meta: meta() }));
+    // 计数类数字全部走 meta（服务端全量算），这里只是给前端渲染用的窗口。
+    res.end(JSON.stringify({ events: events.slice(-1200), meta: meta() }));
     return;
   }
   if (url === '/api/stream') {
@@ -1072,7 +1151,10 @@ server.listen(PORT, HOST, () => {
     const nets = os.networkInterfaces();
     for (const list of Object.values(nets)) {
       for (const n of list || []) {
-        if (n.family === 'IPv4' && !n.internal) console.log(`[live] 手机上开：http://${n.address}:${PORT}`);
+        // 只有真的开在 0.0.0.0 上才提手机访问，否则这句会让人以为局域网能连。
+        if (HOST !== '127.0.0.1' && HOST !== 'localhost' && n.family === 'IPv4' && !n.internal) {
+          console.log(`[live] 手机上开：http://${n.address}:${PORT}（内容含日记正文与调用记录，确认是自家局域网）`);
+        }
       }
     }
   } catch {}

@@ -34,7 +34,8 @@ export function configCandidates() {
   const list = [
     process.env.LIVE_CONFIG,
     path.join(PKG, 'config.json'),
-    path.join(process.cwd(), 'config.json'),
+    // 不认 cwd 里的 config.json：那是个烂大街的文件名，DSH 在别的项目里启动就会被误读。
+
   ]
   for (const home of DSH_HOMES) list.push(path.join(home, CONFIG_NAME))
   // 同一个目录可能从 DSH_HOME 与 USERPROFILE 各算一次，去重后更好读
@@ -61,7 +62,7 @@ export async function apply(ctx) {
   // ESM 是按 URL 缓存的。把 server.mjs 的 mtime 拼进 query：改了代码重装一次就能拿到
   // 新模块，不用为了插件重启整个 DSH。
   const stamp = (() => {
-    try { return String(Math.floor(statSync(new URL('../server.mjs', import.meta.url)).mtimeMs)) } catch { return '0' }
+    try { return String(Math.floor(fs.statSync(new URL('../server.mjs', import.meta.url)).mtimeMs)) } catch { return '0' }
   })()
   const spec = file
     ? '../server.mjs?config=' + encodeURIComponent(file) + '&b=' + stamp

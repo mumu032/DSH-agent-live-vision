@@ -669,7 +669,7 @@
   <!-- 右栏 -->
   <div class="rail" style="display:flex;flex-direction:column;gap:14px">
     <div class="card">
-      <h2>她去过的平台 <span class="n" id="platTag">近 24 小时</span></h2>
+      <h2>工具调用分布 <span class="n" id="platTag">近 24 小时</span></h2>
       <div id="plats"></div>
       <div class="legend" id="legend"></div>
     </div>
@@ -948,7 +948,7 @@ function renderNow(){
   const resting = idle > 25*60_000;
   $('nowAct').textContent = resting ? '安安静静待着' : last.action;
   $('nowDet').textContent = resting
-    ? `上次动是 ${ago(last.t)}：${last.action}${last.detail?' — '+last.detail:''}`
+    ? `上一件事 ${ago(last.t)}：${last.action}${last.detail?' — '+last.detail:''}`
     : (last.detail || '');
   const c = PCOLOR[last.platform]||'#64748b';
   $('nowPlat').innerHTML = `<span class="pd" style="background:${c}"></span>${esc(PNAME[last.platform]||last.platform)}`;
@@ -960,8 +960,8 @@ function renderNow(){
   $('statusLine').textContent = awake
     ? '正在动 · 最近 ' + ago(last.t)
     : (meta.sleep && meta.sleep.inSleep
-        ? '睡了（' + String(meta.sleep.startHour).padStart(2, '0') + ':00–' + String(meta.sleep.endHour).padStart(2, '0') + ':00）· 上次动在 ' + ago(toolAt)
-        : (toolIdle < 3600_000 ? '安静着 · 上次动在 ' + ago(toolAt) : '睡了 · 上次动在 ' + ago(toolAt)));
+        ? '睡了（' + String(meta.sleep.startHour).padStart(2, '0') + ':00–' + String(meta.sleep.endHour).padStart(2, '0') + ':00）· 上次调用工具在 ' + ago(toolAt)
+        : (toolIdle < 3600_000 ? '安静着 · 上次调用工具在 ' + ago(toolAt) : '睡了 · 上次调用工具在 ' + ago(toolAt)));
 }
 
 // 今天的小结：从她自己的账本里数，不猜
@@ -1125,7 +1125,7 @@ function renderPlats(){
       <div class="t"><span class="d" style="background:${PCOLOR[id]};color:${PCOLOR[id]}"></span>${name}</div>
       <div class="c mono">${n}</div>
       <div class="mini"><i style="width:${pct}%;background:${PCOLOR[id]};opacity:.75"></i></div>
-      <div class="m">${lastEv?esc(lastEv.action+' · '+ago(lastEv.t)):'近 24 小时没去'}</div></div>`;
+      <div class="m">${lastEv?esc(lastEv.action+' · '+ago(lastEv.t)):'近 24 小时没调用'}</div></div>`;
   }).join('');
   // 点平台卡 = 切到那个平台的实时流；再点一次回到全部。手机上顺手把流滚到眼前。
   for (const el of document.querySelectorAll('[data-pcard]')) {
@@ -1334,11 +1334,12 @@ function renderHeart(){
 
 // ---- 筛选条（平台 chip） ----
 function renderFilters(){
-  const counts = {};
-  for(const e of S.events) counts[e.platform]=(counts[e.platform]||0)+1;
+  // 数字走服务端今日全量（meta.todayByPlatform）；S.events 只是 1200 条展示窗口，
+  // 拿它算总数会在忙的一天里悄悄少算。
+  const counts = meta.todayByPlatform || (()=>{ const c={}; for(const e of S.events) c[e.platform]=(c[e.platform]||0)+1; return c; })();
   const ids = ['all',...PLATS.map(p=>p[0]).filter(id=>counts[id]).sort((a,b)=>(counts[b]||0)-(counts[a]||0))];
   const chips = ids.map(id=>{
-    const n = id==='all' ? S.events.length : (counts[id]||0);
+    const n = id==='all' ? (meta.todayAll ?? S.events.length) : (counts[id]||0);
     const label = id==='all' ? '全部' : PNAME[id];
     return `<div class="chip ${S.platform===id?'on':''}" data-f="${id}">${label}<span class="c">${n}</span></div>`;
   });
