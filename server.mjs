@@ -84,10 +84,15 @@ function demoRoot() {
 }
 
 function loadConfig() {
-  const file = process.env.LIVE_CONFIG
+  const explicit = process.env.LIVE_CONFIG
     || SELF_Q.get('config')
-    || (process.argv.find((a) => a.startsWith('--config=')) || '').split('=')[1]
-    || path.join(HERE, DEMO_FLAG ? path.join('fixtures', 'config.json') : 'config.json');
+    || (process.argv.find((a) => a.startsWith('--config=')) || '').split('=')[1];
+  // 显式指定的就只认它；没指定时先看包目录，再退回 DSH 的家目录 —— 插件那半端一直这么找，
+  // 独立 node server.mjs 以前只认包目录，换个地方跑就莫名其妙变成默认值了。
+  const pkgConfig = path.join(HERE, DEMO_FLAG ? path.join('fixtures', 'config.json') : 'config.json');
+  const dshHomeConfig = path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'agent-live.json');
+  let file = explicit || pkgConfig;
+  if (!explicit && !DEMO_FLAG && !fs.existsSync(file) && fs.existsSync(dshHomeConfig)) file = dshHomeConfig;
   let cfg = {};
   let configFound = false;
   try { cfg = JSON.parse(fs.readFileSync(file, 'utf8')); configFound = true; } catch { cfg = {}; }
