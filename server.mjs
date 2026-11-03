@@ -22,7 +22,7 @@ const SELF_Q = (() => { try { return new URL(import.meta.url).searchParams; } ca
 const EXPLICIT_CONFIG = SELF_Q.get('config') || process.env.LIVE_CONFIG || process.argv.find((x) => x.startsWith('--config=')) || '';
 // 命令行白名单：手滑写错（--dem / --prot=3112）时给一句话，而不是默默按默认值跑
 (() => {
-  const KNOWN = /^(--demo|--check|--help|-h|--port=\d+|--host=[^\s]+|--config=.+)$/;
+  const KNOWN = /^(--demo|--check|--help|-h|--port=[^\s]+|--host=[^\s]+|--config=.+)$/;
   const bad = process.argv.slice(2).filter((a) => a.startsWith('-') && !KNOWN.test(a));
   if (bad.length) {
     console.error('[live] 不认识的参数：' + bad.join(' '));
@@ -201,7 +201,9 @@ function loadConfig() {
     root: (() => { const r = demo ? demoRoot() : (cfg.root || process.cwd()); return r; })(),
     bridgeLog: demo ? '' : (cfg.bridgeLog || ''),
     port: (() => {
-      const raw = process.env.LIVE_PORT || cfg.port || (demo ? 3112 : 3110);
+      // 优先级：--port= > LIVE_PORT > 配置里的 port > 默认（demo 3112 / 正常 3110）
+      const cliPort = (process.argv.find((a) => a.startsWith('--port=')) || '').split('=')[1];
+      const raw = cliPort || process.env.LIVE_PORT || cfg.port || (demo ? 3112 : 3110);
       const n = Number(String(raw).trim());
       if (!Number.isInteger(n) || n < 1 || n > 65535) {
         console.error('[live] 端口不对：' + JSON.stringify(raw) + '（要 1–65535 的整数，或者用 --port=3112 换一个）');
