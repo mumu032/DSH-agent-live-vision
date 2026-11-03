@@ -20,9 +20,20 @@ const SELF_Q = (() => { try { return new URL(import.meta.url).searchParams; } ca
 // 注意：宿主进程的环境变量是会被继承的（曾经在这里踩过坑：插件塞了 AGENT_LIVE_DEMO=1，
 // 结果连命令行跑的 node server.mjs 都变成了 demo 数据）。所以「显式给的 config」优先于环境里的 demo。
 const EXPLICIT_CONFIG = SELF_Q.get('config') || process.env.LIVE_CONFIG || process.argv.find((x) => x.startsWith('--config=')) || '';
+// 命令行白名单：手滑写错（--dem / --prot=3112）时给一句话，而不是默默按默认值跑
+(() => {
+  const KNOWN = /^(--demo|--check|--help|-h|--port=\d+|--host=[^\s]+|--config=.+)$/;
+  const bad = process.argv.slice(2).filter((a) => a.startsWith('-') && !KNOWN.test(a));
+  if (bad.length) {
+    console.error('[live] 不认识的参数：' + bad.join(' '));
+    console.error('        试试 node server.mjs --help');
+    process.exit(2);
+  }
+})();
+
 const DEMO_FLAG = process.argv.includes('--demo') || SELF_Q.get('demo') === '1' || (!EXPLICIT_CONFIG && process.env.AGENT_LIVE_DEMO === '1');
 // 示例账本里的时间写死在生成那天，隔几天再跑就全被 day0 过滤掉，页面看着像装坏了。
-// 这里把 fixtures 复制到临时目录、整份按天平移，让最新一条落在今天 —— 仓库里的文件一个都不动。
+// 这里把 fixtures 复制到临时目录、把整份时间重映射到「刚刚」附近的窗口 —— 仓库里的文件一个都不动。
 const DEMO_CACHE = path.join(os.tmpdir(), 'agent-live-demo');
 const RE_ISO = /(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2}):(\d{2})(?:\.\d+)?Z/g;
 const RE_LOCAL = /(\d{4})-(\d{2})-(\d{2}) (\d{2}):(\d{2})/g;
@@ -170,7 +181,15 @@ function loadConfig() {
     configFound,
     root: (() => { const r = demo ? demoRoot() : (cfg.root || process.cwd()); return r; })(),
     bridgeLog: demo ? '' : (cfg.bridgeLog || ''),
-    port: Number(process.env.LIVE_PORT || cfg.port || (demo ? 3112 : 3110)),
+    port: (() => {
+      const raw = process.env.LIVE_PORT || cfg.port || (demo ? 3112 : 3110);
+      const n = Number(String(raw).trim());
+      if (!Number.isInteger(n) || n < 1 || n > 65535) {
+        console.error('[live] 端口不对：' + JSON.stringify(raw) + '（要 1–65535 的整数，或者用 --port=3112 换一个）');
+        process.exit(2);
+      }
+      return n;
+    })(),
     // 默认只听 127.0.0.1：这页能看到日记正文、会话未读数、每次工具调用的参数。
     // 想在手机上看，显式 --host=0.0.0.0 或 LIVE_HOST=0.0.0.0（启动时会打印风险提示）。
     host: process.env.LIVE_HOST || cfg.host
@@ -495,6 +514,14 @@ function isHiddenEvent(ev) {
   return !!ev && HIDDEN_ACTIONS.has(String(ev.action || ''));
 }
 const events = [];
+// 面板只显示最近 1200 条，但以前是「只截返回、不截内存」：桥接跑几周以后
+// events 会一直涨，meta() 每 3 秒还要遍历一遍。留 5000 条足够覆盖 24 小时的图，
+// 再老的本来也没人看。
+const MAX_EVENTS = 5000;
+function keepRecent() {
+  const over = events.length - MAX_EVENTS;
+  if (over > 0) events.splice(0, over);
+}
 let seq = 0;
 const MAX = 900;
 const subs = new Set();
@@ -513,7 +540,7 @@ function push(ev) {
   if (last && now - last < 4000) return;
   recentKeys.set(dupKey, now);
   ev.id = ++seq;
-  events.push(ev);
+  events.push(ev); keepRecent();
   if (events.length > MAX) events.shift();
   broadcast({ type: 'events', events: [ev] });
 }
@@ -797,7 +824,15 @@ function herWrites() {
       let st; try { st = fs.statSync(path.join(dir, f)); } catch { continue; }
       out.knowledge.total++;
       if (st.mtimeMs >= day0) out.knowledge.today++;
-      if (st.mtimeMs > out.knowledge.lastAt) { out.knowledge.lastAt = st.mtimeMs; out.knowledge.lastTitle = f.replace(/\.md$/i, ''); }
+      // 标题优先取正文第一行「# 标题」——文件名可能是 slug 或编码过的，
+      // 自己写笔记的人也习惯把标题写在正文里
+      let title = f.replace(/\.md$/i, '');
+      try {
+        const head = fs.readFileSync(path.join(dir, f), 'utf8').split(/\r?\n/, 6).find((l) => /^#\s+/.test(l));
+        if (head) title = head.replace(/^#\s+/, '').trim() || title;
+      } catch {}
+      const mt = Math.round(st.mtimeMs);
+      if (mt > out.knowledge.lastAt) { out.knowledge.lastAt = mt; out.knowledge.lastTitle = title; }
     }
   } catch {}
   // 还惦记着：data/state/wants.json，按会话分组，每个会话 items[]
@@ -1149,7 +1184,7 @@ function bootHistory() {
         }
         if (isQQComms(ev) || isHiddenEvent(ev)) { pend.pop(); continue; } // QQ 那摊事、唤醒这类都不记
         ev.detail = prettyDetail(ev.detail);
-        events.push(ev);
+        events.push(ev); keepRecent();
         pend[pend.length - 1].ev = ev;
       } else if (r.type === 'result') {
         for (let i = pend.length - 1; i >= 0; i--) {
@@ -1172,7 +1207,7 @@ function bootHistory() {
       if (!l.trim()) continue;
       let e; try { e = JSON.parse(l); } catch { continue; }
       if ((Number(e.t) || 0) < day0) continue;
-      const ev = outingEvent(e); ev.id = ++seq; events.push(ev);
+      const ev = outingEvent(e); ev.id = ++seq; events.push(ev); keepRecent();
     }
     selfTail.seekToEnd();
   } catch {}
@@ -1196,7 +1231,7 @@ function bootHistory() {
         if (m) {
           const ev = fn(m);
           // 回放历史时也要过同一道 QQ 过滤（否则重启后 QQ 那几条又爬回来）
-          if (ev && !isQQComms(ev) && !isHiddenEvent(ev)) events.push({ t, ...ev, id: ++seq, detail: prettyDetail(ev.detail) });
+          if (ev && !isQQComms(ev) && !isHiddenEvent(ev)) { events.push({ t, ...ev, id: ++seq, detail: prettyDetail(ev.detail) }); keepRecent(); }
           break;
         }
       }
@@ -1223,13 +1258,28 @@ export function startStandalone() {
   startEngine();
   const server = http.createServer((req, res) => { handleRequest(req, res).catch(() => {}); });
   server.on('error', (e) => {
-  // 已经有一个在跑了就别报错刷屏：双击第二次、或开机自启和桌面快捷方式撞在一起时都会走到这里
-  if (e && e.code === 'EADDRINUSE') { process.exit(0); }
+  // 端口被占：先问一句「是不是我自己已经在跑」，是就安静退出，别刷错误
+  if (e && e.code === 'EADDRINUSE') {
+    const probe = http.get({ host: '127.0.0.1', port: PORT, path: '/api/snapshot', timeout: 1500 }, (r) => {
+      const mine = r.headers['server'] === 'agent-live' || r.statusCode === 200;
+      r.resume();
+      if (mine) console.log('[live] 已经有一份在跑了：http://' + HOST + ':' + PORT + '（这次就不重复起了）');
+      else console.error('[live] 端口 ' + PORT + ' 被别的程序占着，换一个：--port=3113');
+      process.exit(mine ? 0 : 1);
+    });
+    probe.on('timeout', () => { probe.destroy(); });
+    probe.on('error', () => {
+      console.error('[live] 端口 ' + PORT + ' 被占用（不像是本程序）。换一个：--port=3113');
+      process.exit(1);
+    });
+    return;
+  }
   console.error('[live] 起不来:', e?.message ?? e);
   process.exit(1);
 });
 server.listen(PORT, HOST, () => {
-  console.log(`[live] 探测台在 http://${HOST}:${PORT}  已灌 ${events.length} 条历史`);
+  const realPort = server.address().port;
+  console.log(`[live] 探测台在 http://${HOST}:${realPort}  已灌 ${events.length} 条历史`);
   // 手机要看就输这个地址（同一 WiFi 下）
   try {
     const nets = os.networkInterfaces();
@@ -1237,7 +1287,7 @@ server.listen(PORT, HOST, () => {
       for (const n of list || []) {
         // 只有真的开在 0.0.0.0 上才提手机访问，否则这句会让人以为局域网能连。
         if (HOST !== '127.0.0.1' && HOST !== 'localhost' && n.family === 'IPv4' && !n.internal) {
-          console.log(`[live] 手机上开：http://${n.address}:${PORT}（内容含日记正文与调用记录，确认是自家局域网）`);
+          console.log(`[live] 手机上开：http://${n.address}:${realPort}（内容含日记正文与调用记录，确认是自家局域网）`);
         }
       }
     }
@@ -1301,9 +1351,10 @@ function printHelp() {
     '',
     '  用法: node ' + argv1 + ' [选项]',
     '',
-    '    --demo              用仓库里的示例账本跑（会复制到临时目录、把时间平移到「刚刚」）',
+    '    --demo              用仓库里的示例账本跑（会复制到临时目录、把时间压到「刚刚」）',
     '    --config=<文件>     指定 config.json（默认：包目录 config.json → $DSH_HOME/agent-live.json）',
     '    --check             不启服务，只打印读的是哪份数据、每个账本找到没有',
+    '    --port=<端口>       换一个端口（默认 3110；--demo 默认 3112）',
     '    --host=<地址>       监听地址（默认 127.0.0.1；要看手机请显式 0.0.0.0）',
     '    --help              打印这段',
     '',

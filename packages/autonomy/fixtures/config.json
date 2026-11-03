@@ -1,0 +1,9 @@
+{
+  "agentName": "她",
+  "tickSeconds": 60,
+  "sleep": { "enabled": true, "startHour": 1, "endHour": 8 },
+  "proactive": { "enabled": true, "idleMinutes": 10, "probability": 0.6, "maxPerDay": 8 },
+  "explore": { "enabled": true, "idleMinutes": 10, "probability": 0.55, "maxPerDay": 6 },
+  "study": { "enabled": true, "minGapHours": 60, "startHour": 9, "endHour": 23, "probability": 0.7 },
+  "budget": { "dailyUnits": 200000 }
+}

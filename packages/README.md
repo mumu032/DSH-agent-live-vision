@@ -57,7 +57,7 @@ packages/autonomy/
 ### 一行试用
 
 ```bash
-npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.1.0.tar.gz agent-autonomy -- --demo
+npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.2.0.tar.gz agent-autonomy -- --demo
 ```
 
 > 用 tag 而不是 `main`：npm 会按地址缓存 tarball，原地改 `main` 你拿到的可能还是旧代码。

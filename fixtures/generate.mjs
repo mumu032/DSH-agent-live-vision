@@ -163,9 +163,11 @@ const diaries = [
 ].filter((x) => at(Number(x.time.slice(11, 13)), 0).getTime() <= at(23, 59).getTime());
 W('data/日记/diary.jsonl', diaries.map((x) => JSON.stringify(x)).join('\n') + '\n');
 
-W('data/knowledge/冷萃为什么要泡那么久.md', '# 冷萃为什么要泡那么久\n\n因为低温萃取慢：同样多的味道，用冷水要 12~16 小时才出得来，用热水只要 4 分钟。\n');
-W('data/knowledge/画暗调：黑压过头会连主体一起吞掉.md', '# 画暗调：黑压过头会连主体一起吞掉\n\n暗部一旦低于某个亮度，轮廓就没了。留一点点反光，人才不会糊进背景里。\n');
-W('data/knowledge/雨天窗边的光.md', '# 雨天窗边的光\n\n阴天的光很软、方向不明，适合画情绪不适合画体积。要体积感就得自己造一盏。\n');
+// 文件名用 ASCII slug，标题写在正文第一行 —— 中文文件名在 git（core.quotepath）
+// 和某些解压工具里会被转义，演示数据没必要给大家添这个麻烦
+W('data/knowledge/cold-brew.md', '# 冷萃为什么要泡那么久\n\n因为低温萃取慢：同样多的味道，用冷水要 12~16 小时才出得来，用热水只要 4 分钟。\n');
+W('data/knowledge/dark-palette.md', '# 画暗调：黑压过头会连主体一起吞掉\n\n暗部一旦低于某个亮度，轮廓就没了。留一点点反光，人才不会糊进背景里。\n');
+W('data/knowledge/rainy-window.md', '# 雨天窗边的光\n\n阴天的光很软、方向不明，适合画情绪不适合画体积。要体积感就得自己造一盏。\n');
 
 W('data/state/wants.json', JSON.stringify({
   'private:10000001': {

@@ -12,10 +12,3 @@ npm-debug.log*
 # 系统垃圾
 .DS_Store
 Thumbs.db
-node_modules/
-node_modules/
-config.json
-state/
-*.log
-packages/*/state/
-packages/*/node_modules/

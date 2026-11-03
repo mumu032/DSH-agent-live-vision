@@ -1,6 +1,6 @@
 {
   "name": "agent-live",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "A read-only live dashboard for what your AI agent is actually doing — built from its own JSONL ledgers.",
   "type": "module",
   "bin": {
@@ -35,7 +35,9 @@
     "README.md",
     "LICENSE",
     "cordis.patch.yml",
-    "packages"
+    "packages",
+    "lib",
+    "adapters"
   ],
   "main": "dsh/index.js",
   "exports": {
@@ -56,5 +58,13 @@
         "@deepseek-ai/dsh-client-ui-settings-plugins"
       ]
     }
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/mumu032/DSH-agent-live-vision.git"
+  },
+  "homepage": "https://github.com/mumu032/DSH-agent-live-vision#readme",
+  "bugs": {
+    "url": "https://github.com/mumu032/DSH-agent-live-vision/issues"
   }
 }
