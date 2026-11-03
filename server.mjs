@@ -36,47 +36,114 @@ function walkFiles(dir, out = []) {
   return out;
 }
 
-function demoShiftDays(dir) {
-  let newest = 0;
+function demoStamps(dir) {
+  // 收集 demo 目录里的所有时间点（ISO、本地 YYYY-MM-DD HH:MM、日志里的 HH:MM:SS）
+  const out = [];
   for (const f of walkFiles(dir)) {
-    const text = fs.readFileSync(f, 'utf8');
-    for (const m of text.matchAll(RE_ISO)) newest = Math.max(newest, Date.parse(m[0]));
-    for (const m of text.matchAll(RE_LOCAL)) newest = Math.max(newest, Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00'));
+    const isLog = /\.log$/i.test(f);
+    const lines = fs.readFileSync(f, 'utf8').split('\n');
+    lines.forEach((line, i) => {
+      for (const m of line.matchAll(RE_ISO)) out.push({ f, i, kind: 'iso', raw: m[0], t: Date.parse(m[0]) });
+      for (const m of line.matchAll(RE_LOCAL)) {
+        out.push({ f, i, kind: 'local', raw: m[0], t: Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00') });
+      }
+      if (isLog && !RE_ISO.test(line) && !RE_LOCAL.test(line)) {
+        for (const m of line.matchAll(RE_HMS)) {
+          const d = new Date(); d.setHours(Number(m[1]), Number(m[2]), Number(m[3]), 0);
+          out.push({ f, i, kind: 'hms', raw: m[0], t: d.getTime() });
+        }
+      }
+      RE_ISO.lastIndex = 0; RE_LOCAL.lastIndex = 0;
+    });
   }
-  if (!newest) return 0;
-  const a = new Date(newest); a.setHours(0, 0, 0, 0);
-  const b = new Date(); b.setHours(0, 0, 0, 0);
-  return Math.round((b.getTime() - a.getTime()) / 86400000);
+  return out;
 }
 
-function shiftTimestamps(dir, days) {
-  const ms = days * 86400000;
+const RE_HMS = /\b(\d{2}):(\d{2}):(\d{2})\b/g;
+
+// 把整份示例账本压进一个窗口：最老一条贴在窗口起点、最新一条贴在「10 分钟前」。
+// 之所以要「压」而不是「挪」：示例数据本身跨 12 小时，而面板只看近 24 小时（且凌晨还有 -6h 的宽限），
+// 凌晨跑的时候窗口只剩 8 小时，光平移必然掉一半事件，看起来就像坏了。
+function rebaseDemoTime(dir, targetOldest, targetNewest) {
+  const stamps = demoStamps(dir).filter((x) => Number.isFinite(x.t));
+  if (!stamps.length) return;
+  const min = Math.min(...stamps.map((x) => x.t));
+  const max = Math.max(...stamps.map((x) => x.t));
+  const span = max - min;
+  const scale = span > 0 ? (targetNewest - targetOldest) / span : 0;
+  const mapT = (t) => Math.round(targetOldest + (t - min) * scale);
+
   const pad = (n) => String(n).padStart(2, '0');
-  const doIso = (s) => new Date(Date.parse(s) + ms).toISOString();
-  const doLocal = (m) => {
-    const d = new Date(Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00') + ms);
-    return d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
-  };
-  for (const f of walkFiles(dir)) {
-    const text = fs.readFileSync(f, 'utf8');
-    const next = text.replace(RE_ISO, (s) => doIso(s)).replace(RE_LOCAL, (s, ...g) => doLocal([s, ...g]));
-    if (next !== text) fs.writeFileSync(f, next);
+  const byFile = new Map();
+  for (const st of stamps) {
+    if (!byFile.has(st.f)) byFile.set(st.f, []);
+    byFile.get(st.f).push(st);
   }
+  // social-v2.json 里的时间是 epoch 毫秒，不是 ISO，前面那套正则扫不到 —— 单独补一遍
+  try {
+    const socialFile = path.join(dir, 'state', 'social-v2.json');
+    if (fs.existsSync(socialFile)) {
+      const obj = JSON.parse(fs.readFileSync(socialFile, 'utf8'));
+      const walk = (o) => {
+        if (!o || typeof o !== 'object') return;
+        for (const k of Object.keys(o)) {
+          const v = o[k];
+          if (typeof v === 'number' && v > 1.6e12 && v < 2e12) o[k] = mapT(v);
+          else if (v && typeof v === 'object') walk(v);
+        }
+      };
+      walk(obj);
+      fs.writeFileSync(socialFile, JSON.stringify(obj, null, 2));
+    }
+  } catch {}
+
+  for (const [f, list] of byFile) {
+    const lines = fs.readFileSync(f, 'utf8').split('\n');
+    // 同一行里可能有多个时间点，从后往前替换避免位移
+    const perLine = new Map();
+    for (const st of list) {
+      if (!perLine.has(st.i)) perLine.set(st.i, []);
+      perLine.get(st.i).push(st);
+    }
+    for (const [i, items] of perLine) {
+      let line = lines[i];
+      for (const st of items.sort((a, b) => b.raw.length - a.raw.length)) {
+        const t = mapT(st.t);
+        let repl;
+        if (st.kind === 'hms') {
+          const d = new Date(t);
+          repl = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
+        } else if (st.kind === 'local') {
+          const d = new Date(t);
+          repl = d.getFullYear() + '-' + pad(d.getMonth() + 1) + '-' + pad(d.getDate()) + ' ' + pad(d.getHours()) + ':' + pad(d.getMinutes());
+        } else {
+          repl = new Date(t).toISOString();
+        }
+        line = line.split(st.raw).join(repl);
+      }
+      lines[i] = line;
+    }
+    fs.writeFileSync(f, lines.join('\n'));
+  }
+}
+
+function dayStartMs() {
+  const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime();
 }
 
 function demoRoot() {
   const base = path.join(HERE, 'fixtures');
   try {
-    const dayKey = new Date().toISOString().slice(0, 10);
-    const out = path.join(DEMO_CACHE, dayKey);
-    const stampFile = path.join(out, '.ready');
-    if (fs.existsSync(stampFile)) return out;
+    const out = path.join(DEMO_CACHE, 'current');
     fs.rmSync(out, { recursive: true, force: true });
     fs.mkdirSync(out, { recursive: true });
     fs.cpSync(base, out, { recursive: true });
-    const shift = demoShiftDays(out);
-    if (shift) shiftTimestamps(out, shift);
-    fs.writeFileSync(stampFile, String(Date.now()));
+    const now = Date.now();
+    // 面板的可见窗口是「今天 0 点往前 6 小时」；再留 2 分钟余量
+    // 尽量整份落在「今天」，这样「今天自己出门」之类按自然日算的数字不会是 0；
+    // 凌晨跑的时候今天只有两小时，那就把所有示例事件压进这两小时（反正是假数据）
+    const from = Math.max(dayStartMs() + 120_000, now - 20 * 3600_000);
+    rebaseDemoTime(out, from, now - 10 * 60 * 1000);
     return out;
   } catch (e) {
     return base;
@@ -938,6 +1005,9 @@ function meta() {
     hourly,
     todayAll,
     todayByPlatform,
+    // 本次快照窗口（1200 条）里的计数：中栏 chip 用它，保证和列表里数出来的一致
+    windowAll: events.length,
+    windowByPlatform: (() => { const c = {}; for (const e of events) c[e.platform] = (c[e.platform] || 0) + 1; return c; })(),
     tool24: events.filter((e) => e.kind === 'tool' && e.t >= day24).length,
     toolToday: events.filter((e) => e.kind === 'tool' && e.t >= day0).length,
     // 2026-10-31 04:1x：产品方只要实时流里别出现 QQ 内容，会话状态本身要留着（这张卡不算"监测消息"）
@@ -1225,6 +1295,23 @@ function runCheck() {
   console.log('');
 }
 
+function printHelp() {
+  const argv1 = process.argv[1] ? path.basename(process.argv[1]) : 'server.mjs';
+  console.log([
+    '',
+    '  用法: node ' + argv1 + ' [选项]',
+    '',
+    '    --demo              用仓库里的示例账本跑（会复制到临时目录、把时间平移到「刚刚」）',
+    '    --config=<文件>     指定 config.json（默认：包目录 config.json → $DSH_HOME/agent-live.json）',
+    '    --check             不启服务，只打印读的是哪份数据、每个账本找到没有',
+    '    --host=<地址>       监听地址（默认 127.0.0.1；要看手机请显式 0.0.0.0）',
+    '    --help              打印这段',
+    '',
+    '  环境变量: LIVE_CONFIG / LIVE_PORT / LIVE_HOST / DSH_HOME',
+    '',
+  ].join('\n'));
+}
+
 // 只有被直接执行时才自己监听端口；被插件 import 时什么都不做。
 const IS_MAIN = (() => {
   try {
@@ -1232,5 +1319,6 @@ const IS_MAIN = (() => {
     return argv1 && argv1 === path.resolve(fileURLToPath(import.meta.url));
   } catch { return false; }
 })();
-if (IS_MAIN && process.argv.includes('--check')) runCheck();
+if (IS_MAIN && (process.argv.includes('--help') || process.argv.includes('-h'))) printHelp();
+else if (IS_MAIN && process.argv.includes('--check')) runCheck();
 else if (IS_MAIN) startStandalone();

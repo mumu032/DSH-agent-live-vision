@@ -639,7 +639,7 @@
   <div class="rail" style="display:flex;flex-direction:column;gap:14px;min-width:0">
     <div class="card feed">
       <h2>实时流 <span class="n" id="feedCount"></span></h2>
-      <div class="filters" id="filters"></div>
+      <div class="filters" id="filters" title="实时流这次载入的全部事件（含记忆图、日子这类系统事件）"></div>
       <div class="tools">
         <input class="search" id="q" type="search" autocomplete="off" placeholder="搜动作 / 详情 / 工具名…（按 / 聚焦）">
         <div class="seg" id="range">
@@ -669,7 +669,7 @@
   <!-- 右栏 -->
   <div class="rail" style="display:flex;flex-direction:column;gap:14px">
     <div class="card">
-      <h2>工具调用分布 <span class="n" id="platTag">近 24 小时</span></h2>
+      <h2>工具调用分布 <span class="n" id="platTag">近 24 小时 · 仅工具</span></h2>
       <div id="plats"></div>
       <div class="legend" id="legend"></div>
     </div>
@@ -1135,7 +1135,7 @@ function renderPlats(){
       afterFilterChange(true);
     };
   }
-  $('platTag').textContent = '近 24 小时';
+  $('platTag').textContent = '近 24 小时 · 仅工具';
 }
 
 // ---------- 心电图（2026-11-01：产品方要"心跳心电图"，并且"聊天/活动时心率要升"） ----------
@@ -1336,10 +1336,11 @@ function renderHeart(){
 function renderFilters(){
   // 数字走服务端今日全量（meta.todayByPlatform）；S.events 只是 1200 条展示窗口，
   // 拿它算总数会在忙的一天里悄悄少算。
-  const counts = meta.todayByPlatform || (()=>{ const c={}; for(const e of S.events) c[e.platform]=(c[e.platform]||0)+1; return c; })();
+  // 用「本次窗口」的计数：这样 chip 上的数字和下面列表里数得出来的一模一样
+  const counts = meta.windowByPlatform || (()=>{ const c={}; for(const e of S.events) c[e.platform]=(c[e.platform]||0)+1; return c; })();
   const ids = ['all',...PLATS.map(p=>p[0]).filter(id=>counts[id]).sort((a,b)=>(counts[b]||0)-(counts[a]||0))];
   const chips = ids.map(id=>{
-    const n = id==='all' ? (meta.todayAll ?? S.events.length) : (counts[id]||0);
+    const n = id==='all' ? (meta.windowAll ?? S.events.length) : (counts[id]||0);
     const label = id==='all' ? '全部' : PNAME[id];
     return `<div class="chip ${S.platform===id?'on':''}" data-f="${id}">${label}<span class="c">${n}</span></div>`;
   });
