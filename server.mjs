@@ -140,7 +140,7 @@ const PLATFORMS = [
   ['eigenflux', 'EigenFlux', '#a78bfa'],
   ['qzone', 'QQ空间', '#ffd93b'],
   ['draw', '画图', '#22d3ee'],
-  ['work', '创作台', '#38bdf8'],
+  ['work', '动手做', '#38bdf8'],
   ['learn', '自学', '#34d399'],
   ['self', '她自己', '#c084fc'],
   ['qq', 'QQ', '#4d8dff'],
@@ -154,7 +154,10 @@ const RULES = [
   [/qzone/i, 'qzone'],
   [/qq_draw|comfyui|see_bili_frames|qq_see_live|qq_see_image|qq_get_message_images/i, 'draw'],
   [/qq_video|qq_doc|qq_send_file|qq_novel|qq_album|bili_upload/i, 'work'],
-  [/qq_knowledge|web_search|web_fetch|qq_slang|ops_|bili_search|bili_subtitle|bili_comments/i, 'learn'],
+  [/qq_knowledge|web_search|web_fetch|qq_slang|bili_search|bili_subtitle|bili_comments/i, 'learn'],
+  // 通用 agent 的「动手」类工具（跑命令、改文件）—— 以前的 ops_ 被算进「自学」，
+  // 换上别人的日志之后会满屏「自学 · 动了下电脑」，口径不对。
+  [/^(ops_bash|pwsh|bash|shell|command|run_code|write|edit|multi_edit|apply_patch|notebook_edit)/i, 'work'],
   [/qq_diary|qq_persona|qq_role_card|qq_impression|qq_memory|qq_want|qq_later|qq_change_reply|qq_report_feedback/i, 'self'],
   [/qq_send|qq_reply|qq_poke|qq_send_|qq_collect_sticker|qq_sticker/i, 'qq'],
 ];
@@ -190,6 +193,9 @@ const VERB = {
   bili_dm_list: '看 B站 私信', bili_dm_read: '读 B站 私信', bili_send_message: '回 B站 私信',
   bili_upload_video: '投稿到 B站', bili_dm_broadcast: '群发 B站 私信',
   web_search: '上网搜', web_fetch: '读一个网页', compress: '整理自己的记忆',
+  pwsh: '动了动手', bash: '动了动手', shell: '动了动手', command: '跑了个命令',
+  write: '写了个文件', edit: '改了文件', multi_edit: '改了几处文件', apply_patch: '打了补丁',
+  read: '读文件', read_image: '看了张图', todo_write: '列了个清单', run_code: '跑了段代码',
   ops_bash: '动了下电脑', ops_read_files: '读文件', ops_grep: '翻文件', ops_inspect_local_file: '看文件',
   mcp__comfyui__comfy_draw: '画了张图', mcp__comfyui__comfy_status: '看显卡',
   mcp__browser__web_open: '开了个网页', mcp__browser__web_shot: '截了个图',

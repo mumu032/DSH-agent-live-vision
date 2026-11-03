@@ -192,6 +192,34 @@ node server.mjs --check
 
 自己写一个别的 agent 来喂这个面板也行：只要按 `tool-calls.jsonl` 每行一个 `{ts, tool, args, ok}` 写下去，页面就能跑起来（字段容错，缺 `ok` 当成功）。
 
+### 适配器：把别人的日志喂进来
+
+面板只认一种账本格式，所以「我用的不是 qq-bridge」的人需要先把日志转一道。仓库自带一个现成的：
+
+```bash
+# 把 DSH 自己的会话日志（~/.dsh/sessions/**/session.v4.jsonl.zstd）转成账本
+node adapters/dsh-session.mjs "$HOME/.dsh/sessions" ./ledger
+
+# 确认它读到了东西
+node server.mjs --check --config=./ledger/config.json
+
+# 跑起来
+node server.mjs --config=./ledger/config.json
+```
+
+实测：一台用了半个月的机器，40 个会话、**19,835 次工具调用**，2.3 秒转完（读取走 Node 自带的 zstd，不需要装什么）。
+
+账本格式就两种行，自己写生成器也不难：
+
+```jsonc
+{"type":"call",   "time":"2026-11-04T00:12:33.000Z", "tool":"web_search", "args":{"queries":["..."]}}
+{"type":"result", "time":"2026-11-04T00:12:34.000Z", "tool":"web_search", "ok":true}
+```
+
+- `time` 用 ISO 字符串；`args` 给对象或 JSON 字符串都行（面板只用它来写「干了啥」那句话）；`ok:false` 会在流里标红。
+- 工具名决定它落在哪个平台（`bili_*` → B站、`qq_music` → 网易云、`web_search|web_fetch` → 自学、`ops_bash|pwsh|write|edit` → 动手做…），认不出来的算「待机」。
+- 只写 `call` 不写 `result` 也能跑，那种调用一律当成功。
+
 ### 配置字段
 
 | 字段 | 说明 |
