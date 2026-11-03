@@ -19,5 +19,21 @@
   },
   "weather": {
     "refreshMin": 45
+  },
+  "pricing": {
+    "symbol": "¥",
+    "unit": "1M tokens",
+    "peakMultiplier": 2,
+    "models": {
+      "my-model": {
+        "label": "我的模型",
+        "off": {
+          "cacheMiss": 0.5,
+          "cacheHit": 0.05,
+          "output": 2
+        }
+      }
+    },
+    "fallbackModel": "my-model"
   }
 }

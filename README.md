@@ -171,6 +171,8 @@ MIT
 
 ### 换台机器 / 给别人用：先跑一次自检
 
+不记得有哪些开关就 `node server.mjs --help`（六个选项 + 环境变量，一屏看完）。
+
 这个面板读的是「账本文件」，不是去连谁的接口 —— 所以别人要用，只要把 `root` 指到他自己的 agent 工作目录，不需要改代码。它期望的最小目录长这样：
 
 | 文件 | 必需 | 用来画什么 |
@@ -209,6 +211,8 @@ node server.mjs --config=./ledger/config.json
 
 实测：一台用了半个月的机器，40 个会话、**19,835 次工具调用**，2.3 秒转完（读取走 Node 自带的 zstd，不需要装什么）。
 
+> 读 `.zstd` 要 **Node ≥ 22.15**（面板本体 Node 18 就能跑）。版本太老时适配器会直接说「这个 node 太老」，不会丢一堆栈；也可以先把日志解压成 `session.v4.jsonl` 再喂。
+
 账本格式就两种行，自己写生成器也不难：
 
 ```jsonc
@@ -231,6 +235,7 @@ node server.mjs --config=./ledger/config.json
 | `weather.refreshMin` | 天气刷新间隔（分钟） |
 | `title` / `agent` | 页面标题、头像下面那个名字 |
 | `port` / `host` | 只有独立跑的时候用 |
+| `pricing` | 可选：覆盖内置价目表（换了模型/涨价了才需要）。结构见 `lib/model-prices.mjs`：`{ unit, currency, symbol, peakMultiplier, peakWindows, peakWeekdays, models: { "模型名": { label, off: { cacheMiss, cacheHit, output } } }, fallbackModel }`；只写想改的模型，其余字段自动并用内置值 |
 
 ### 卸掉
 

@@ -30,6 +30,23 @@ import { promptFor } from './prompt.mjs';
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const argv = process.argv.slice(2);
+const USAGE = [
+  '',
+  '  用法: agent-autonomy [选项]',
+  '',
+  '    --demo               用包里自带的假数据跑一轮（npx 一行就能看到效果）',
+  '    --once               算一轮就退出（默认常驻，按 tickSeconds 循环）',
+  '    --config=<文件>      调度配置（默认包内 config.json）',
+  '    --state=<文件>       已落盘的状态（默认包内 state/scheduler-state.json）',
+  '    --conv=<文件>        会话列表（默认包内 state/conversations.json）',
+  '    --now=<ISO时间>      假装现在几点（调试/回放用）',
+  '    --dry                只算不写盘',
+  '    --webhook=<url>      决定要动的时候 POST 过去',
+  '    --verbose            把跳过原因也打出来',
+  '    --help               打印这段',
+  '',
+].join('\n');
+if (argv.includes('--help') || argv.includes('-h')) { console.log(USAGE); process.exit(0); }
 const arg = (k, d) => {
   const i = argv.indexOf(k);
   return i >= 0 && argv[i + 1] ? argv[i + 1] : d;
@@ -120,7 +137,13 @@ function tick(now) {
 }
 
 if (once || nowArg) {
-  const now = nowArg ? Date.parse(nowArg) : Date.now();
+  // --demo 又没指定 --now：假装是当天 14:30。否则半夜照着 README 那行跑，
+  // 只会看到「睡觉窗口，跳过」，像是坏的。
+  const now = (() => {
+    if (nowArg) return Date.parse(nowArg);
+    if (DEMO) { const d = new Date(); d.setHours(14, 30, 0, 0); return d.getTime(); }
+    return Date.now();
+  })();
   tick(Number.isFinite(now) ? now : Date.now());
   process.exit(0);
 }

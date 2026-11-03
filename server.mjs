@@ -169,11 +169,30 @@ function loadConfig() {
   // 独立 node server.mjs 以前只认包目录，换个地方跑就莫名其妙变成默认值了。
   const pkgConfig = path.join(HERE, DEMO_FLAG ? path.join('fixtures', 'config.json') : 'config.json');
   const dshHomeConfig = path.join(process.env.DSH_HOME || path.join(os.homedir(), '.dsh'), 'agent-live.json');
+  // 显式给了 --config= 却不存在：这基本一定是路径写错了，直接说，
+  // 不要偷偷回退到别的配置（那样会读成别人的账本，数字看着对但全不是自己的）
+  if (explicit && !fs.existsSync(explicit)) {
+    console.error('[live] 找不到你指定的配置文件：' + explicit);
+    process.exit(2);
+  }
   let file = explicit || pkgConfig;
   if (!explicit && !DEMO_FLAG && !fs.existsSync(file) && fs.existsSync(dshHomeConfig)) file = dshHomeConfig;
   let cfg = {};
   let configFound = false;
   try { cfg = JSON.parse(fs.readFileSync(file, 'utf8')); configFound = true; } catch { cfg = {}; }
+  // root 允许相对路径（适配器就写 ./ledger 这种）。以前按「当前工作目录」解析，
+  // 换个目录启动、或者 --config= 指到别处，就会读成空目录 —— 面板一片空白还不报错。
+  if (cfg && typeof cfg.root === 'string' && cfg.root && !path.isAbsolute(cfg.root)) {
+    // 先按配置文件所在目录解析（最直觉），不存在再按当前工作目录试一次 ——
+    // 老版本适配器写的 'root: ./ledger' 是相对 cwd 的，升级后不能让它突然读空。
+    const baseDir = fs.existsSync(file) ? path.dirname(path.resolve(file)) : process.cwd();
+    const cand = [path.resolve(baseDir, cfg.root), path.resolve(process.cwd(), cfg.root)];
+    cfg.root = cand.find((p) => fs.existsSync(p)) || cand[0];
+  }
+  if (cfg && typeof cfg.bridgeLog === 'string' && cfg.bridgeLog && !path.isAbsolute(cfg.bridgeLog)) {
+    const baseDir = fs.existsSync(file) ? path.dirname(path.resolve(file)) : process.cwd();
+    cfg.bridgeLog = path.resolve(baseDir, cfg.bridgeLog);
+  }
   const demo = DEMO_FLAG || !!cfg.demo;
   return {
     demo,
@@ -1149,7 +1168,10 @@ function handle(req, res) {
     });
     res.write(`data: ${JSON.stringify({ type: 'hello', meta: meta() })}\n\n`);
     subs.add(res);
-    req.on('close', () => subs.delete(res));
+    req.on('close', () => { subs.delete(res); clearInterval(res.__ping); });
+    // 空闲时也要有字节流动，不然中间的代理会在 60 秒左右把连接掐掉，
+    // 页面上就变成「数据源断开了」，其实是闲的。
+    res.__ping = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 25000);
     return;
   }
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('404');

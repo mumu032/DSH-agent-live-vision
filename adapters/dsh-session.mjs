@@ -33,6 +33,11 @@ function walk(dir, out = []) {
 function readLog(file) {
   const raw = fs.readFileSync(file);
   // .zstd 走 Node 自带的 zstd（Node >= 22.15）；没压缩的直接当文本
+  const zstdUnavailable = typeof zlib.zstdDecompressSync !== 'function';
+  if (file.endsWith('.zstd') && zstdUnavailable) {
+    throw new Error('这个 node 太老，解不了 .zstd（需要 Node >= 22.15，当前 ' + process.version + '）。'
+      + '要么升级 node，要么先把日志解压成 session.v4.jsonl 再跑。');
+  }
   const text = file.endsWith('.zstd')
     ? zlib.zstdDecompressSync(raw).toString('utf8')
     : raw.toString('utf8');
@@ -94,7 +99,8 @@ if (!fs.existsSync(tokens)) fs.writeFileSync(tokens, '');
 
 const cfgFile = path.join(outDir, 'config.json');
 if (!fs.existsSync(cfgFile)) {
-  fs.writeFileSync(cfgFile, JSON.stringify({ root: outDir, title: 'DSH · 实时探测', agent: '本机 agent' }, null, 2));
+  // root 写绝对路径：面板按配置文件的目录解析相对路径，但写死了更省事，也方便复制
+  fs.writeFileSync(cfgFile, JSON.stringify({ root: path.resolve(outDir), title: 'DSH · 实时探测', agent: '本机 agent' }, null, 2));
 }
 
 const fail = rows.filter(([, r]) => !r.ok).length;
