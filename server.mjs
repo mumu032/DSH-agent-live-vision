@@ -89,10 +89,13 @@ function loadConfig() {
     || (process.argv.find((a) => a.startsWith('--config=')) || '').split('=')[1]
     || path.join(HERE, DEMO_FLAG ? path.join('fixtures', 'config.json') : 'config.json');
   let cfg = {};
-  try { cfg = JSON.parse(fs.readFileSync(file, 'utf8')); } catch { cfg = {}; }
+  let configFound = false;
+  try { cfg = JSON.parse(fs.readFileSync(file, 'utf8')); configFound = true; } catch { cfg = {}; }
   const demo = DEMO_FLAG || !!cfg.demo;
   return {
     demo,
+    configFile: file,
+    configFound,
     root: (() => { const r = demo ? demoRoot() : (cfg.root || process.cwd()); return r; })(),
     bridgeLog: demo ? '' : (cfg.bridgeLog || ''),
     port: Number(process.env.LIVE_PORT || cfg.port || (demo ? 3112 : 3110)),
@@ -1162,6 +1165,55 @@ server.listen(PORT, HOST, () => {
   return server;
 }
 
+// node server.mjs --check：不启服务，只把「它在读哪份数据、缺哪几样」打印出来。
+// 别人把面板搬到自己机器上时，最先卡住的就是「路径对不对、账本有没有」。
+function countLines(file) {
+  try { return fs.readFileSync(file, 'utf8').split('\n').filter((x) => x.trim()).length; } catch { return -1; }
+}
+
+function runCheck() {
+  const ok = (b) => (b ? '✔' : '✘');
+  console.log('');
+  console.log('  agent-live 自检');
+  console.log('  ──────────────────────────────────────');
+  console.log('  配置来源   ' + (CFG.configFound ? CFG.configFile : CFG.configFile + '（没读到，用默认值）'));
+  console.log('  数据根目录 ' + ROOT + (fs.existsSync(ROOT) ? '' : '   ← 这个目录不存在'));
+  console.log('  模式       ' + (CFG.demo ? 'demo（示例账本，会复制到临时目录）' : '真实账本'));
+  console.log('  监听       ' + CFG.host + ':' + CFG.port);
+  console.log('');
+
+  const need = [
+    ['state/tool-calls.jsonl', true, '每次工具调用的流水（实时流、平台分布、心跳都靠它）'],
+    ['state/token-usage.jsonl', true, 'token 账本（顶栏的今日 token / 花费）'],
+    ['state/social-v2.json', true, '会话状态（唤醒配置、未读数、睡了没）'],
+    ['data/日记/diary.jsonl', false, '日记（右下「她最近写下的」）'],
+    ['data/state/wants.json', false, '还惦记着的事'],
+  ];
+  let hard = 0;
+  for (const [rel, required, why] of need) {
+    const f = path.join(ROOT, rel);
+    const n = countLines(f);
+    const found = n >= 0;
+    if (!found && required) hard++;
+    console.log('  ' + ok(found) + ' ' + rel.padEnd(26) + (found ? n + ' 行' : '没找到') + '   ' + why);
+  }
+  if (CFG.bridgeLog) {
+    const n = countLines(CFG.bridgeLog);
+    console.log('  ' + ok(n >= 0) + ' ' + 'bridgeLog'.padEnd(26) + (n >= 0 ? n + ' 行' : '没找到') + '   桥接日志（掉线原因、QQ 状态）');
+  }
+  console.log('');
+  if (CFG.demo) {
+    console.log('  这是 demo 数据。要接自己的：把 config.example.json 复制成 config.json，');
+    console.log('  把 root 指向你的 agent 工作目录（里面要有上面那几个 state/ 文件），再跑一次 --check。');
+  } else if (hard) {
+    console.log('  有 ' + hard + ' 个必需的账本没找到。检查 config.json 里的 root 是不是 agent 的工作目录。');
+    process.exitCode = 1;
+  } else {
+    console.log('  账本齐了。');
+  }
+  console.log('');
+}
+
 // 只有被直接执行时才自己监听端口；被插件 import 时什么都不做。
 const IS_MAIN = (() => {
   try {
@@ -1169,4 +1221,5 @@ const IS_MAIN = (() => {
     return argv1 && argv1 === path.resolve(fileURLToPath(import.meta.url));
   } catch { return false; }
 })();
-if (IS_MAIN) startStandalone();
+if (IS_MAIN && process.argv.includes('--check')) runCheck();
+else if (IS_MAIN) startStandalone();

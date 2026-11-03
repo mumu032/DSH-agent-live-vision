@@ -157,15 +157,40 @@ MIT
 
 ### 它读哪份配置
 
-插件按这个顺序找配置，找到哪个用哪个：
+按这个顺序找配置，找到哪个用哪个：
 
-1. 环境变量 `LIVE_CONFIG` 指向的 json
-2. 包目录下的 `config.json`（你自己建的，`.gitignore` 已经把它排除了）
-3. 当前工作目录的 `config.json`
-4. `C:Users6995.dsh/agent-live.json`
+1. 环境变量 `LIVE_CONFIG`
+2. 命令行 `--config=<路径>`
+3. 包目录下的 `config.json`（你自己建的，`.gitignore` 已经排除了）
+4. `$DSH_HOME/agent-live.json`（默认就是 `C:\Users\<你>\.dsh\agent-live.json`）
 
-**一个都找不到就跑内置示例数据**（`fixtures/` 里那份假账本）—— 所以刚装完一定有东西看，不会是一片空白。
-把 `config.example.json` 复制成 `config.json`、把 `root` 指向你自己的 agent 工作目录（里面要有 `state/tool-calls.jsonl` 那些账本），再重启一次 DSH 就切到真实数据。
+（**不认当前工作目录的 `config.json`**：那名字太常见，DSH 如果在别的项目里启动，会被那个项目的文件误伤。）
+
+一个都找不到就跑内置示例数据（`fixtures/` 里那份假账本）—— 所以刚装完一定有东西看，不会白屏。
+把 `config.example.json` 复制成 `config.json`、把 `root` 指向你自己的 agent 工作目录，再重启一次 DSH 就切到真实数据。
+
+### 换台机器 / 给别人用：先跑一次自检
+
+这个面板读的是「账本文件」，不是去连谁的接口 —— 所以别人要用，只要把 `root` 指到他自己的 agent 工作目录，不需要改代码。它期望的最小目录长这样：
+
+| 文件 | 必需 | 用来画什么 |
+| --- | --- | --- |
+| `state/tool-calls.jsonl` | 是 | 实时流、平台分布、心跳、出门 |
+| `state/token-usage.jsonl` | 是 | 顶栏今日 token / 花费 |
+| `state/social-v2.json` | 是 | 会话卡、未读数、睡没睡 |
+| `data/日记/diary.jsonl` | 可选 | 右下「她最近写下的 · 日记」 |
+| `data/state/wants.json` | 可选 | 「还惦记着的事」 |
+| `bridgeLog` | 可选 | 桥接日志（掉线原因） |
+
+对不上就会一片空白，所以先自检，不要靠猜：
+
+```bash
+node server.mjs --check
+```
+
+它不启服务，只打印「读的是哪份配置、数据根目录在哪、每个账本找到没有 / 多少行」。缺必需项时退出码为 1，方便塞进安装脚本里。
+
+自己写一个别的 agent 来喂这个面板也行：只要按 `tool-calls.jsonl` 每行一个 `{ts, tool, args, ok}` 写下去，页面就能跑起来（字段容错，缺 `ok` 当成功）。
 
 ### 配置字段
 
