@@ -1267,14 +1267,38 @@ function bootHistory() {
 }
 
 let engineStarted = false;
-export function startEngine() {
+export let engineStopped = false;
+const engineTimers = [];
+
+/**
+ * 主动停机。桌面客户端更新时会先给宿主发 SIGTERM，再等它「优雅退出」；
+ * 探测台这边如果还挂着 SSE（页面上那条 /api/stream）或者 3 秒一次的定时器，
+ * 宿主就会一直等到超时，更新于是报「未能安全停止任务」。
+ */
+export function stopEngine() {
+  if (engineStopped) return;
+  engineStopped = true;
+  for (const t of engineTimers) { try { clearInterval(t); } catch {} }
+  engineTimers.length = 0;
+  for (const r of subs) {
+    try { clearInterval(r.__ping); r.end(); } catch {}
+  }
+  subs.clear();
+}
+process.once('SIGTERM', stopEngine);
+process.once('SIGINT', stopEngine);
+
+function startEngine() {
   if (engineStarted) return;
   engineStarted = true;
   bootHistory();
   refreshOutings();
-  setInterval(() => { callsTail.poll(); sysTail.poll(); selfTail.poll(); }, 700);
-  setInterval(refreshOutings, 15000);
-  setInterval(() => broadcast({ type: 'meta', meta: meta() }), 3000);
+  engineTimers.push(
+    setInterval(() => { callsTail.poll(); sysTail.poll(); selfTail.poll(); }, 700),
+    setInterval(refreshOutings, 15000),
+    setInterval(() => broadcast({ type: 'meta', meta: meta() }), 3000),
+  );
+  for (const t of engineTimers) t.unref?.(); // 没人看的时候别拦着进程退出
 }
 
 // 独立跑：自己开端口（`node server.mjs`）。DSH 插件里不会调到这里。
@@ -1317,6 +1341,10 @@ server.listen(PORT, HOST, () => {
     }
   } catch {}
   });
+  // 独立跑的时候，Ctrl+C / 被系统 SIGTERM 也要干净收尾：先断 SSE、清定时器，再关端口
+  const bye = () => { stopEngine(); try { server.close(() => process.exit(0)); } catch { process.exit(0); } setTimeout(() => process.exit(0), 800).unref(); };
+  process.once('SIGTERM', bye);
+  process.once('SIGINT', bye);
   return server;
 }
 
