@@ -546,6 +546,7 @@ function keepRecent() {
 let seq = 0;
 const MAX = 900;
 const subs = new Set();
+const SSE_MAX_MS = 4 * 60_000;
 const recentKeys = new Map(); // 去重：同工具同内容 5s 内只留一条
 function prettyDetail(s) {
   if (!s) return s;
@@ -1170,10 +1171,13 @@ function handle(req, res) {
     });
     res.write(`data: ${JSON.stringify({ type: 'hello', meta: meta() })}\n\n`);
     subs.add(res);
-    req.on('close', () => { subs.delete(res); clearInterval(res.__ping); });
+    req.on('close', () => { subs.delete(res); clearInterval(res.__ping); clearTimeout(res.__life); });
     // 空闲时也要有字节流动，不然中间的代理会在 60 秒左右把连接掐掉，
     // 页面上就变成「数据源断开了」，其实是闲的。
     res.__ping = setInterval(() => { try { res.write(': ping\n\n'); } catch {} }, 25000);
+    // 单条连接最多活这么久，到点主动收尾：浏览器 EventSource 会自动重连，
+    // 用户看不出来，但任何一次「关服务」都不会被一条老连接无限期拖住。
+    res.__life = setTimeout(() => { try { clearInterval(res.__ping); res.end(); } catch {} }, SSE_MAX_MS);
     return;
   }
   res.writeHead(404, { 'Content-Type': 'text/plain; charset=utf-8' }).end('404');
@@ -1281,7 +1285,7 @@ export function stopEngine() {
   for (const t of engineTimers) { try { clearInterval(t); } catch {} }
   engineTimers.length = 0;
   for (const r of subs) {
-    try { clearInterval(r.__ping); r.end(); } catch {}
+    try { clearInterval(r.__ping); clearTimeout(r.__life); r.end(); } catch {}
   }
   subs.clear();
 }

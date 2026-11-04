@@ -83,5 +83,12 @@ export async function apply(ctx) {
     },
   }), `agent-live: ${PREFIX}`)
 
+  // 宿主关服务 / 重载插件时会 dispose 这个 ctx。**必须**在这里把 SSE 断掉：
+  // 桌面客户端自动更新时会先请宿主「优雅退出」，HTTP 服务要等所有连接结束，
+  // 探测台那条 /api/stream 一直连着的话，等到超时就报「未能安全停止任务」。
+  ctx.effect(() => () => {
+    try { live.stopEngine() } catch {}
+  })
+
   console.log(`[agent-live] 已挂载 ${PREFIX}（配置：${file || '没找到 config.json，先用示例数据跑起来'}）`)
 }
