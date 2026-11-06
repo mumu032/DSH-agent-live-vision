@@ -10,14 +10,14 @@
 **一行就能看到它在想什么**（不用 clone，不用装依赖）：
 
 ```bash
-npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.2.1.tar.gz agent-autonomy -- --demo --once --now 2026-11-01T14:30:00
+npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.3.0.tar.gz agent-autonomy -- --demo --once --now 2026-11-01T14:30:00
 # → {"reason":"study","why":"还没自学过",…}
 # → {"reason":"explore","why":"今天第 1/6 次出门",…}
 ```
 
 换成 `--now 2026-11-01T02:30:00`（凌晨两点），它会说「睡觉窗口，跳过」。
 
-> 两点注意：①`npx --package=github:…` 要走 git，机器上 git 不在 PATH 时会卡住；②npm 会把同一个 tarball 地址**缓存**住，所以这里固定用 tag `v0.2.0`——想跟最新就把 tag 换成 `v0.2.1` 这种新版本号，别原地改 `main`。
+> 两点注意：①`npx --package=github:…` 要走 git，机器上 git 不在 PATH 时会卡住；②npm 会把同一个 tarball 地址**缓存**住，所以这里固定用 tag `v0.2.0`——想跟最新就把 tag 换成 `v0.3.0` 这种新版本号，别原地改 `main`。
 
 
 ```bash

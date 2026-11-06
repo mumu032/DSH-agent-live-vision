@@ -58,6 +58,7 @@ function demoStamps(dir) {
       for (const m of line.matchAll(RE_LOCAL)) {
         out.push({ f, i, kind: 'local', raw: m[0], t: Date.parse(m[1] + '-' + m[2] + '-' + m[3] + 'T' + m[4] + ':' + m[5] + ':00') });
       }
+      for (const m of line.matchAll(RE_MS)) out.push({ f, i, kind: 'ms', raw: m[1], t: Number(m[1]) });
       if (isLog && !RE_ISO.test(line) && !RE_LOCAL.test(line)) {
         for (const m of line.matchAll(RE_HMS)) {
           const d = new Date(); d.setHours(Number(m[1]), Number(m[2]), Number(m[3]), 0);
@@ -71,6 +72,9 @@ function demoStamps(dir) {
 }
 
 const RE_HMS = /\b(\d{2}):(\d{2}):(\d{2})\b/g;
+
+// 账本里的行是 {"t":1793498700000,...}，既不是 ISO 也不是 HH:MM:SS，单独认一遍
+const RE_MS = /"t"\s*:\s*(1[6-9]\d{11})\b/g;
 
 // 把整份示例账本压进一个窗口：最老一条贴在窗口起点、最新一条贴在「10 分钟前」。
 // 之所以要「压」而不是「挪」：示例数据本身跨 12 小时，而面板只看近 24 小时（且凌晨还有 -6h 的宽限），
@@ -121,6 +125,7 @@ function rebaseDemoTime(dir, targetOldest, targetNewest) {
       for (const st of items.sort((a, b) => b.raw.length - a.raw.length)) {
         const t = mapT(st.t);
         let repl;
+        if (st.kind === 'ms') { line = line.split(st.raw).join(String(t)); continue; }
         if (st.kind === 'hms') {
           const d = new Date(t);
           repl = pad(d.getHours()) + ':' + pad(d.getMinutes()) + ':' + pad(d.getSeconds());
@@ -768,6 +773,9 @@ function tokensTodayRaw() {
   const day0 = todayStart();
   let miss = 0, out = 0, hit = 0, turns = 0, money = 0;
   const byModel = new Map();
+  // 今天的每小时花了多少、以及最贵的几轮（④ 花费曲线 + 最贵五轮）
+  const perHour = Array.from({ length: 24 }, () => ({ n: 0, cost: 0 }));
+  const topTurns = [];
   // 价目表：配置里写了 pricing 就用它的，没写就用内置的官方默认表。
   const table = resolvePriceTable(typeof CFG !== 'undefined' && CFG ? CFG.pricing : undefined);
   // 另外算一份本月：只给「今天」的话，过了零点就是 0 元，看着像坏了；
@@ -800,10 +808,23 @@ function tokensTodayRaw() {
       const acc = byModel.get(model) || { model, label: (table.models[model] || {}).label || model, cost: 0 };
       acc.cost += one.cost.total;
       byModel.set(model, acc);
+      const hh = new Date(Number(r.t)).getHours();
+      perHour[hh].n++;
+      perHour[hh].cost += one.cost.total;
+      topTurns.push({
+        at: Number(r.t),
+        model,
+        label: (table.models[model] || {}).label || model,
+        tokens: (Number(b.cacheMiss) || 0) + (Number(b.output) || 0) + (Number(b.cacheHit) || 0),
+        cost: one.cost.total,
+      });
     }
   } catch {}
+  topTurns.sort((a, b) => b.tokens - a.tokens);
   return {
     miss, out, hit, turns,
+    perHour,
+    top: topTurns.slice(0, 5),
     billable: miss + out + hit * 0.1,
     cost30: { total: money30, turns: turns30, since: from30, month: new Date(from30).getMonth() + 1 },
     cost: {
@@ -1094,6 +1115,28 @@ function meta() {
     sleep: sleepMeta(),
     writes: herWrites(),
     explore: exploreGate(),
+    // 今天的健康度：多少事件、多少条失败、最近三条失败的原文（⑤）
+    health: (() => {
+      const d0 = todayStart();
+      let total = 0;
+      let bad = 0;
+      const recent = [];
+      for (const e of events) {
+        if (e.t < d0) continue;
+        total++;
+        const failed = e.ok === false || /^error/i.test(String(e.detail || '')) || /失败/.test(String(e.action || ''));
+        if (failed) { bad++; recent.push(e); }
+      }
+      recent.sort((a, b) => b.t - a.t);
+      return {
+        total,
+        failed: bad,
+        rate: total ? bad / total : 0,
+        recent: recent.slice(0, 3).map((e) => ({
+          id: e.id, t: e.t, action: e.action || '', detail: e.detail || '', platform: e.platform || 'idle',
+        })),
+      };
+    })(),
     lastEventAt: events.length ? events[events.length - 1].t : 0,
   };
 }
