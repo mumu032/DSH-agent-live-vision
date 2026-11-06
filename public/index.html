@@ -733,7 +733,7 @@
     <div class="sp-rrow"><span>身体</span><b id="spBody">—</b></div>
     <div class="sp-meter"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="sp-fig" id="spFig">
-      <img id="spFigImg" src="assets/chibi/f00.png" alt="" draggable="false">
+      <img id="spFigImg" src="assets/chibi.png" alt="" draggable="false">
       <span class="sp-fig-scan"></span>
     </div>
   </aside>
@@ -749,7 +749,7 @@
 
   <!-- 左上：身份 + 时间；右上：数据源 + 信号 -->
   <div class="sp-tag-tl">
-    <div class="sp-tl1">AGENT LIVE <b id='spVer'>v0.3.8</b></div>
+    <div class="sp-tl1">AGENT LIVE <b id='spVer'>v0.3.9</b></div>
     <div class="sp-tl2"><span id="spClock">--:--:--</span></div>
   </div>
   <div class="sp-tag-tr">
@@ -2362,7 +2362,7 @@ function startFigSway() {
   }, 110);
 }
 function stopFigSway() { if (figTimer) { clearInterval(figTimer); figTimer = null; } }
-try { startFigSway(); } catch (e) {}
+try { if (new URLSearchParams(location.search).has("fig3d")) startFigSway(); } catch (e) {}
 /* ───────── ② 详情抽屉 ───────── */
 let dwEvent = null;
 function openDrawer(e){
