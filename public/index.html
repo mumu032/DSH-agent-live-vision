@@ -557,8 +557,8 @@
 @media (max-width: 1100px){ .sp-rail{display:none} }
 
 /* 中间的全息像 */
-.sp-fig{position:absolute;left:50%;top:47.5%;transform:translate(-50%,-56%);
-  width:min(34vh,300px);pointer-events:none;will-change:transform;
+.sp-fig{position:absolute;left:5%;bottom:4%;transform:none;
+  width:min(20vh,150px);pointer-events:none;will-change:transform;
   animation:sp-bob 4.6s ease-in-out infinite;transition:opacity .6s}
 .sp-fig::before{content:"";position:absolute;inset:-16% -26%;border-radius:50%;z-index:-1;
   background:radial-gradient(closest-side,rgba(3,6,11,.88),rgba(3,6,11,.5) 58%,transparent 76%)}
@@ -569,7 +569,7 @@
   background:repeating-linear-gradient(180deg,rgba(4,7,13,.0) 0 2px,rgba(4,7,13,.42) 2px 4px);
   mix-blend-mode:multiply;opacity:.3;
   -webkit-mask-image:linear-gradient(180deg,#000 6%,#000 92%,transparent);mask-image:linear-gradient(180deg,#000 6%,#000 92%,transparent)}
-.sp-plate{position:absolute;left:50%;top:47.5%;transform:translate(-50%,calc(-56% + min(34vh,300px) * .52));
+.sp-plate{position:absolute;left:5%;bottom:3.4%;transform:translateX(-50%);
   width:min(34vh,300px);height:28px;border-radius:50%;pointer-events:none;
   background:radial-gradient(ellipse at center,rgba(56,189,248,.35),rgba(56,189,248,.06) 55%,transparent 72%);
   box-shadow:0 0 26px rgba(56,189,248,.35);animation:sp-plate 4.6s ease-in-out infinite}
