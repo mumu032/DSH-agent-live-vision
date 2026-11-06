@@ -557,13 +557,13 @@
 @media (max-width: 1100px){ .sp-rail{display:none} }
 
 /* 中间的全息像 */
-.sp-fig{position:relative;width:min(17vh,124px);margin:14px auto 2px;pointer-events:none}
+.sp-fig{position:relative;width:min(22vh,168px);margin:14px auto 2px;pointer-events:none}
 .sp-fig::before{content:"";position:absolute;inset:-16% -26%;border-radius:50%;z-index:-1;
   background:radial-gradient(closest-side,rgba(3,6,11,.88),rgba(3,6,11,.5) 58%,transparent 76%)}
 .sp-fig img{width:100%;display:block;
   filter:saturate(1.32) contrast(1.10) brightness(.98) drop-shadow(0 0 9px rgba(56,189,248,.35));
   animation:sp-fig-in 1s .35s both}
-.sp-fig-scan{position:absolute;inset:0;pointer-events:none;
+.sp-fig-scan{position:absolute;inset:0;pointer-events:none;opacity:.16;
   background:repeating-linear-gradient(180deg,rgba(4,7,13,.0) 0 2px,rgba(4,7,13,.42) 2px 4px);
   mix-blend-mode:multiply;opacity:.3;
   -webkit-mask-image:linear-gradient(180deg,#000 6%,#000 92%,transparent);mask-image:linear-gradient(180deg,#000 6%,#000 92%,transparent)}
@@ -733,7 +733,7 @@
     <div class="sp-rrow"><span>身体</span><b id="spBody">—</b></div>
     <div class="sp-meter"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
     <div class="sp-fig" id="spFig">
-      <img src="assets/chibi.png" alt="" draggable="false">
+      <img id="spFigImg" src="assets/chibi/f00.png" alt="" draggable="false">
       <span class="sp-fig-scan"></span>
     </div>
   </aside>
@@ -749,7 +749,7 @@
 
   <!-- 左上：身份 + 时间；右上：数据源 + 信号 -->
   <div class="sp-tag-tl">
-    <div class="sp-tl1">AGENT LIVE <b id='spVer'>v0.3.7</b></div>
+    <div class="sp-tl1">AGENT LIVE <b id='spVer'>v0.3.8</b></div>
     <div class="sp-tl2"><span id="spClock">--:--:--</span></div>
   </div>
   <div class="sp-tag-tr">
@@ -2109,6 +2109,7 @@ setInterval(()=>{
     if (flowTimer) { clearInterval(flowTimer); flowTimer = null; }
     if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
     const fig = document.getElementById('spFig'); if (fig) fig.style.opacity = '0';
+  if (typeof stopFigSway === 'function') stopFigSway();
     done = true;
     setProgress(100);
     const wait = Math.max(0, MIN - (performance.now() - t0));
@@ -2341,6 +2342,27 @@ function renderHealth(){
   }
 }
 
+// ───── 开屏：她的 3D 摆动（16 帧编号轮播，来回摆，不整圈转）─────
+const FIG_N = 16;
+const FIG_SRC = Array.from({ length: FIG_N }, (_, i) => "assets/chibi/f" + String(i).padStart(2, "0") + ".png");
+let figTimer = null, figIdx = 0, figDir = 1, figPreloaded = false;
+function preloadFig() {
+  if (figPreloaded) return; figPreloaded = true;
+  FIG_SRC.forEach((src) => { const im = new Image(); im.src = src; });
+}
+function startFigSway() {
+  preloadFig();
+  const el = document.getElementById("spFigImg");
+  if (!el || figTimer) return;
+  figTimer = setInterval(() => {
+    figIdx += figDir;
+    if (figIdx >= FIG_N - 1) { figIdx = FIG_N - 1; figDir = -1; }
+    else if (figIdx <= 0) { figIdx = 0; figDir = 1; }
+    el.src = FIG_SRC[figIdx];
+  }, 110);
+}
+function stopFigSway() { if (figTimer) { clearInterval(figTimer); figTimer = null; } }
+try { startFigSway(); } catch (e) {}
 /* ───────── ② 详情抽屉 ───────── */
 let dwEvent = null;
 function openDrawer(e){
