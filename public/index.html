@@ -2081,7 +2081,8 @@ function renderState(){
       : weatherTxt;
     const extra = [];
     if (bd.energy != null) extra.push('体力 ' + Math.round(bd.energy * 100) + '%');
-    if (bd.hungry != null && bd.hungry >= 0.45) extra.push('饿 ' + Math.min(95, Math.round(bd.hungry * 100)) + '%');
+    const sat = bd.satiety != null ? Number(bd.satiety) : (bd.hungry != null ? 1 - Number(bd.hungry) : null);
+    if (sat != null) extra.push('饱食 ' + Math.round(Math.max(0, Math.min(1, sat)) * 100) + '%');
     if (bd.sleepDebt >= 0.4) extra.push('缺觉 ' + Number(bd.sleepDebt).toFixed(1) + 'h');
     rows.push('<div class="row" title="' + String(bd.line || '').replace(/"/g, '&quot;') + '"><span class="dot" style="background:' + dotColor + '"></span><span>现在 · ' + String(bd.activity.label || '醒着') + (extra.length ? '　<span class="sub">' + extra.join(' · ') + '</span>' : '') + '</span><span class="cd">' + nextTxt + '</span></div>');
   }
@@ -2166,9 +2167,9 @@ function renderHealth(){
     const nx = bd.next && bd.next.inMin != null ? ' · ' + dur(Number(bd.next.inMin) * 60000) + '后' + bd.next.label : '';
     const debt = Number(bd.sleepDebt) || 0;
     bodyHtml = '<div class="bodybox">' +
-      '<div class="bh"><span>她现在的身体</span><b>' + esc(where) + nx + '</b></div>' +
+      '<div class="bh"><span>她现在的身体' + (bd.balance != null ? ' · 余额 ¥' + Number(bd.balance).toFixed(2) : '') + '</span><b>' + esc(where) + nx + '</b></div>' +
       gauge('体力', bd.energy, '#34d399') +
-      gauge('饿', Math.min(0.95, bd.hungry), '#f59e0b') +
+      gauge('饱食度', Math.max(0, Math.min(1, bd.satiety != null ? Number(bd.satiety) : 1 - Number(bd.hungry || 0))), '#f59e0b') +
       gauge('睡眠债', Math.min(1, debt / 1.5), '#818cf8') +
       '</div>';
   }
