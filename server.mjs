@@ -1292,7 +1292,7 @@ export function stopEngine() {
 process.once('SIGTERM', stopEngine);
 process.once('SIGINT', stopEngine);
 
-function startEngine() {
+export function startEngine() {
   if (engineStarted) return;
   engineStarted = true;
   bootHistory();
