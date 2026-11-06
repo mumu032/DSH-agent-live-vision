@@ -528,6 +528,34 @@
 .sp-corner.bl{bottom:0;left:0;border-right:0;border-top:0}
 .sp-corner.br{bottom:0;right:0;border-left:0;border-top:0}
 
+/* 两侧遥测栏 */
+.sp-rail{position:absolute;top:50%;transform:translateY(-50%);width:186px;
+  font-family:var(--mono,"JetBrains Mono",Consolas,monospace);font-size:10.5px;color:#6f93b3;
+  letter-spacing:.05em;opacity:0;animation:sp-in .8s .5s forwards}
+.sp-rail.left{left:clamp(18px,4.5vw,72px)}
+.sp-rail.right{right:clamp(18px,4.5vw,72px)}
+.sp-rh{display:flex;align-items:center;gap:8px;margin-bottom:10px;color:#4f7898;letter-spacing:.22em;font-size:9px}
+.sp-rh i{flex:1 1 auto;height:1px;background:linear-gradient(90deg,rgba(56,189,248,.45),transparent)}
+.sp-rail.right .sp-rh i{background:linear-gradient(90deg,transparent,rgba(56,189,248,.45))}
+.sp-rrow{display:flex;align-items:baseline;gap:6px;padding:3px 0}
+.sp-rrow span{color:#4a6b88;min-width:62px}
+.sp-rrow b{color:#9fd0ee;font-weight:400}
+.sp-rrow em{font-style:normal;color:#3f678a;font-size:9px}
+.sp-meter{display:flex;gap:3px;margin-top:12px}
+.sp-meter i{flex:1 1 auto;height:14px;background:rgba(56,189,248,.14);position:relative;overflow:hidden}
+.sp-meter i::after{content:"";position:absolute;left:0;right:0;bottom:0;height:0;background:linear-gradient(180deg,#38bdf8,rgba(56,189,248,.15));
+  animation:sp-eq 1.6s ease-in-out infinite}
+.sp-meter i:nth-child(2)::after{animation-delay:.12s}.sp-meter i:nth-child(3)::after{animation-delay:.26s}
+.sp-meter i:nth-child(4)::after{animation-delay:.4s}.sp-meter i:nth-child(5)::after{animation-delay:.18s}
+.sp-meter i:nth-child(6)::after{animation-delay:.34s}.sp-meter i:nth-child(7)::after{animation-delay:.5s}
+.sp-meter i:nth-child(8)::after{animation-delay:.08s}
+@keyframes sp-eq{0%,100%{height:12%}50%{height:88%}}
+.sp-flow{margin:2px 0 10px;height:104px;overflow:hidden;position:relative;
+  mask-image:linear-gradient(180deg,transparent,#000 22%,#000 78%,transparent)}
+.sp-flow div{font-size:9.5px;line-height:1.5;color:#3f7fa6;white-space:nowrap;opacity:.75}
+.sp-flow div:last-child{color:#7dd3fc;opacity:1}
+@media (max-width: 1100px){ .sp-rail{display:none} }
+
 /* 中央文字层 */
 .sp-panel{position:absolute;left:50%;top:64%;transform:translate(-50%,0);
   display:flex;flex-direction:column;align-items:center;width:min(460px,84vw);
@@ -657,6 +685,26 @@
 <body>
 <div id="splash">
   <canvas id="spCanvas"></canvas>
+
+  <!-- 左：她的状态（真数据，数据到了才填） -->
+  <aside class="sp-rail left" id="spRailL">
+    <div class="sp-rh"><span>SUBJECT</span><i></i></div>
+    <div class="sp-rrow"><span>心跳</span><b id="spBpm">—</b><em>次/分</em></div>
+    <div class="sp-rrow"><span>今日 token</span><b id="spTok">—</b></div>
+    <div class="sp-rrow"><span>今日事件</span><b id="spEv">—</b></div>
+    <div class="sp-rrow"><span>余额</span><b id="spBal">—</b></div>
+    <div class="sp-rrow"><span>身体</span><b id="spBody">—</b></div>
+    <div class="sp-meter"><i></i><i></i><i></i><i></i><i></i><i></i><i></i><i></i></div>
+  </aside>
+
+  <!-- 右：数据链路（滚动 hex 瀑布，纯视觉） -->
+  <aside class="sp-rail right" id="spRailR">
+    <div class="sp-rh"><span>LINK</span><i></i></div>
+    <div class="sp-flow" id="spFlow"></div>
+    <div class="sp-rrow"><span>QQ</span><b id="spQQ">建立中</b></div>
+    <div class="sp-rrow"><span>通道</span><b>SSE · LOCAL</b></div>
+    <div class="sp-rrow"><span>权限</span><b>READ ONLY</b></div>
+  </aside>
   <div class="sp-hud">
     <i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
   </div>
@@ -1253,6 +1301,7 @@ function renderPlats(){
 // 波形也不是一种：睡着的、平常的、忙起来的 R 波宽度/高度、S 深度、T 波都不一样，
 // 每一拍还有 20% 概率换成略带差异的变体，看起来才不像复制粘贴。
 const EKG = { span: 25000, raf: 0, beats: [], nextAt: 0, hr: 66, lastReal: 0 };
+window.EKG = EKG;   // 开屏那栏要读心率
 const SHAPES = {
   sleep: { rAmp: 0.74, rW: 52, sAmp: 0.20, tAmp: 0.15, pAmp: 0.10 },
   calm:  { rAmp: 1.00, rW: 36, sAmp: 0.34, tAmp: 0.115, pAmp: 0.085 },
@@ -1881,7 +1930,7 @@ setInterval(()=>{
   const el = document.getElementById('splash');
   if (!el) return;
   const reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  const MIN = reduce ? 220 : 3000;      // 最短停留（让它真的像一次自检）
+  const MIN = reduce ? 220 : 3600;      // 最短停留（让它真的像一次自检，也给两侧遥测栏留出读数时间）
   const MAX = reduce ? 600 : 5200;      // 兜底
   const t0 = performance.now();
   const cfg = window.LIVE_CFG || {};
@@ -1890,6 +1939,47 @@ setInterval(()=>{
   const bar = document.getElementById('spBar');
   const pct = document.getElementById('spPct');
   if (nameEl && cfg.agent) nameEl.textContent = cfg.agent;
+
+  // 两侧遥测栏：左=她的状态（数据到了才填真值），右=hex 瀑布（纯视觉）
+  const rail = {
+    bpm: document.getElementById('spBpm'), tok: document.getElementById('spTok'),
+    ev: document.getElementById('spEv'), bal: document.getElementById('spBal'),
+    body: document.getElementById('spBody'), qq: document.getElementById('spQQ'),
+    flow: document.getElementById('spFlow'),
+  };
+  const kfmt = (n) => { n = Number(n) || 0; return n >= 1e6 ? (n / 1e6).toFixed(2) + 'M' : n >= 1e3 ? Math.round(n / 1e3) + 'k' : String(n); };
+  const rndHex = () => { let s = ''; for (let i = 0; i < 4; i++) s += Math.floor(Math.random() * 65536).toString(16).toUpperCase().padStart(4, '0') + ' '; return s.trim(); };
+  let flowTimer = null;
+  function startFlow(){
+    if (!rail.flow || reduce) return;
+    const push = () => {
+      const d = document.createElement('div');
+      d.textContent = '0x' + rndHex().replace(/ /g, '').slice(0, 4) + '  ' + rndHex();
+      rail.flow.appendChild(d);
+      while (rail.flow.children.length > 7) rail.flow.removeChild(rail.flow.firstChild);
+    };
+    for (let i = 0; i < 7; i++) push();
+    flowTimer = setInterval(push, 160);
+  }
+  startFlow();
+  function fillRails(){
+    const m = window.__lastMeta; if (!m) return;
+    const hr = window.EKG && Number(window.EKG.hr);
+    if (rail.bpm && hr) rail.bpm.textContent = Math.round(hr);
+    if (rail.tok && m.tokens) rail.tok.textContent = kfmt(Math.round(Number(m.tokens.billable) || 0));
+    if (rail.ev) rail.ev.textContent = kfmt(m.todayAll != null ? m.todayAll : (m.tool24 || 0));
+    if (rail.bal) {
+      const b = m.body && m.body.balance;
+      rail.bal.textContent = b != null ? '¥' + Number(b).toFixed(2) : '—';
+    }
+    if (rail.body && m.body) {
+      const bd = m.body;
+      const act = bd.activity && bd.activity.label ? bd.activity.label : (bd.asleep ? '睡着' : '醒着');
+      const sat = bd.satiety != null ? Math.round(Number(bd.satiety) * 100) : null;
+      rail.body.textContent = act + (sat != null ? ' · 饱食 ' + sat + '%' : '');
+    }
+    if (rail.qq && m.qq) rail.qq.textContent = m.qq.connected === false ? '断线' : '在线';
+  }
 
   const LINES = [
     ['加载账本读取器', 'state/*.jsonl'],
@@ -1930,6 +2020,7 @@ setInterval(()=>{
     const poll = () => {
       if (done) return;
       if (document.querySelector('#list .ev') || window.__lastMeta) dataReady = true;
+      try { fillRails(); } catch {}
       if (dataReady) setProgress(progress + (100 - progress) * 0.35);
       const holdV = Math.min(1, (performance.now() - t0) / MIN);
       if (!dataReady) window.__spHold && window.__spHold(holdV * 0.92);
@@ -1950,6 +2041,7 @@ setInterval(()=>{
   }
   function hide(){
     if (done) return;
+    if (flowTimer) { clearInterval(flowTimer); flowTimer = null; }
     done = true;
     setProgress(100);
     const wait = Math.max(0, MIN - (performance.now() - t0));
