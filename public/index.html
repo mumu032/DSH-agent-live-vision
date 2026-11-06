@@ -2058,6 +2058,25 @@ function renderState(){
       rows.push('<div class="row"><span class="dot"></span><span>醒着</span><span class="cd">' + (until>0 ? dur(until*60000)+'后睡' : '') + '</span></div>');
     }
   }
+  // 身体／作息（桥接写的 state/body.json）：现在在干嘛 + 下一件事 + 体力/饿
+  const bd = meta.body || null;
+  if (bd && bd.activity) {
+    const key = String(bd.activity.key || '');
+    const dotColor = key === 'sleep' || key === 'windDown' ? '#818cf8'
+      : key === 'bath' ? '#22d3ee'
+      : ['breakfast','lunch','dinner'].includes(key) ? '#f59e0b'
+      : key === 'wakeup' ? '#a3e635' : '#22c55e';
+    const w = bd.weather || {};
+    const weatherTxt = w.snow ? '下雪' : w.rain ? '下雨' : w.wind ? '风大' : w.hot ? '很热' : w.cold ? '冷' : '';
+    const nextTxt = (bd.next && bd.next.inMin != null && bd.next.key !== 'sleep')
+      ? dur(Number(bd.next.inMin) * 60000) + '后' + bd.next.label
+      : weatherTxt;
+    const extra = [];
+    if (bd.energy != null) extra.push('体力 ' + Math.round(bd.energy * 100) + '%');
+    if (bd.hungry != null && bd.hungry >= 0.45) extra.push('饿 ' + Math.min(95, Math.round(bd.hungry * 100)) + '%');
+    if (bd.sleepDebt >= 0.4) extra.push('缺觉 ' + Number(bd.sleepDebt).toFixed(1) + 'h');
+    rows.push('<div class="row" title="' + String(bd.line || '').replace(/"/g, '&quot;') + '"><span class="dot" style="background:' + dotColor + '"></span><span>现在 · ' + String(bd.activity.label || '醒着') + (extra.length ? '　<span class="sub">' + extra.join(' · ') + '</span>' : '') + '</span><span class="cd">' + nextTxt + '</span></div>');
+  }
   const ex = meta.explore || {};
   const cap = Number(ex.cap ?? ex.maxPerDay ?? 12) || 12;
   const walks = Number(ex.walkedToday ?? 0);

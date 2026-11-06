@@ -1052,6 +1052,17 @@ function quietEndDelayMs(qs, qe) {
   if (end.getTime() <= d.getTime()) end.setDate(end.getDate() + 1);
   return end.getTime() - d.getTime();
 }
+// 桥接每 3 分钟写一次 state/body.json（她此刻在吃什么/在洗澡/多困/下一件事），
+// 面板只负责显示；读不到就当没有，别让整页挂掉。
+function readBodyState() {
+  try {
+    const p = path.join(ROOT, 'state', 'body.json');
+    const b = JSON.parse(fs.readFileSync(p, 'utf8'));
+    if (!b || typeof b !== 'object') return null;
+    if (nowMs() - Number(b.at || 0) > 15 * 60_000) return null; // 太旧就当没有（桥接可能没跑）
+    return b;
+  } catch { return null; }
+}
 function meta() {
   const social = readJsonSafe(F.social) || {};
   const tk = tokensToday();
@@ -1112,6 +1123,7 @@ function meta() {
     tokens: tk,
     qq: { online: qqLink.online, at: qqLink.at, lastError: qqLink.lastError },
     selfTime: { today: selfTimeToday(), lastAt: lastOutingAt(), budget: Number(T.selfTimeTokensPerDay) || 200000 },
+    body: readBodyState(),
     sleep: sleepMeta(),
     writes: herWrites(),
     explore: exploreGate(),

@@ -1,6 +1,6 @@
 {
   "name": "agent-live",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "description": "A read-only live dashboard for what your AI agent is actually doing — built from its own JSONL ledgers.",
   "type": "module",
   "bin": {
