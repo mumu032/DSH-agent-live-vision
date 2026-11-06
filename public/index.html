@@ -556,6 +556,29 @@
 .sp-flow div:last-child{color:#7dd3fc;opacity:1}
 @media (max-width: 1100px){ .sp-rail{display:none} }
 
+/* 中间的全息像 */
+.sp-fig{position:absolute;left:50%;top:47.5%;transform:translate(-50%,-56%);
+  width:min(34vh,300px);pointer-events:none;will-change:transform;
+  animation:sp-bob 4.6s ease-in-out infinite;transition:opacity .6s}
+.sp-fig::before{content:"";position:absolute;inset:-16% -26%;border-radius:50%;z-index:-1;
+  background:radial-gradient(closest-side,rgba(3,6,11,.88),rgba(3,6,11,.5) 58%,transparent 76%)}
+.sp-fig img{width:100%;display:block;
+  filter:saturate(1.32) contrast(1.10) brightness(.98) drop-shadow(0 0 9px rgba(56,189,248,.35));
+  animation:sp-fig-in 1s .35s both}
+.sp-fig-scan{position:absolute;inset:0;pointer-events:none;
+  background:repeating-linear-gradient(180deg,rgba(4,7,13,.0) 0 2px,rgba(4,7,13,.42) 2px 4px);
+  mix-blend-mode:multiply;opacity:.3;
+  -webkit-mask-image:linear-gradient(180deg,#000 6%,#000 92%,transparent);mask-image:linear-gradient(180deg,#000 6%,#000 92%,transparent)}
+.sp-plate{position:absolute;left:50%;top:47.5%;transform:translate(-50%,calc(-56% + min(34vh,300px) * .52));
+  width:min(34vh,300px);height:28px;border-radius:50%;pointer-events:none;
+  background:radial-gradient(ellipse at center,rgba(56,189,248,.35),rgba(56,189,248,.06) 55%,transparent 72%);
+  box-shadow:0 0 26px rgba(56,189,248,.35);animation:sp-plate 4.6s ease-in-out infinite}
+@keyframes sp-bob{0%,100%{transform:translate(-50%,-56%)}50%{transform:translate(-50%,-58%)}}
+@keyframes sp-plate{0%,100%{opacity:.65;transform:translate(-50%,calc(-56% + min(34vh,300px) * .52)) scaleX(1)}
+  50%{opacity:.9;transform:translate(-50%,calc(-58% + min(34vh,300px) * .52)) scaleX(1.04)}}
+@keyframes sp-fig-in{from{opacity:0;filter:blur(10px) brightness(2)}to{opacity:1}}
+@media (max-width: 900px){ .sp-fig,.sp-plate{display:none} }
+
 /* 左上 / 右上角标 */
 .sp-tag-tl,.sp-tag-tr{position:absolute;top:30px;font-family:var(--mono,"JetBrains Mono",Consolas,monospace);
   font-size:10px;letter-spacing:.16em;color:#4f7898;opacity:0;animation:sp-in .8s .35s forwards}
@@ -723,9 +746,16 @@
     <div class="sp-rrow"><span>通道</span><b>SSE · LOCAL</b></div>
     <div class="sp-rrow"><span>权限</span><b>READ ONLY</b></div>
   </aside>
+  <!-- 中间：她的全息像，站在环里 -->
+  <div class="sp-fig" id="spFig">
+    <img src="assets/chibi.png" alt="" draggable="false">
+    <span class="sp-fig-scan"></span>
+  </div>
+  <div class="sp-plate" aria-hidden="true"></div>
+
   <!-- 左上：身份 + 时间；右上：数据源 + 信号 -->
   <div class="sp-tag-tl">
-    <div class="sp-tl1">AGENT LIVE <b id="spVer">v0.3.5</b></div>
+    <div class="sp-tl1">AGENT LIVE <b id="spVer">v0.3.6</b></div>
     <div class="sp-tl2"><span id="spClock">--:--:--</span></div>
   </div>
   <div class="sp-tag-tr">
@@ -2084,6 +2114,7 @@ setInterval(()=>{
     if (done) return;
     if (flowTimer) { clearInterval(flowTimer); flowTimer = null; }
     if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
+    const fig = document.getElementById('spFig'); if (fig) fig.style.opacity = '0';
     done = true;
     setProgress(100);
     const wait = Math.max(0, MIN - (performance.now() - t0));

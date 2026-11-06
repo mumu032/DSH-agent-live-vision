@@ -1178,6 +1178,25 @@ function broadcast(obj) {
   for (const res of subs) { try { res.write(s); } catch {} }
 }
 const HTML = path.join(HERE, 'public', 'index.html');
+// 面板自己的静态资源（开屏那张画、图标之类）：只认 public/assets，其余一律 404
+function __dirnamePublic() {
+  return path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), 'public');
+}
+function serveAsset(req, res) {
+  const rel = decodeURIComponent(req.url.replace(/^\/assets\//, '').split('?')[0]);
+  const base = path.join(__dirnamePublic(), 'assets');
+  const full = path.resolve(base, rel);
+  const rel2 = path.relative(path.resolve(base), full);
+  if (!rel2 || rel2.startsWith('..') || path.isAbsolute(rel2)) { res.writeHead(403).end(); return; }
+  const ext = path.extname(full).toLowerCase();
+  const TYPES = { '.png': 'image/png', '.jpg': 'image/jpeg', '.jpeg': 'image/jpeg', '.webp': 'image/webp', '.svg': 'image/svg+xml', '.gif': 'image/gif' };
+  if (!TYPES[ext]) { res.writeHead(404).end('no asset'); return; }
+  fs.readFile(full, (err, buf) => {
+    if (err) { res.writeHead(404).end('no asset'); return; }
+    res.writeHead(200, { 'Content-Type': TYPES[ext], 'Cache-Control': 'public, max-age=3600' });
+    res.end(buf);
+  });
+}
 function serveImg(req, res) {
   const rel = decodeURIComponent(req.url.replace(/^\/img\//, ''));
   const base = path.join(ROOT, 'data', 'images');
@@ -1206,6 +1225,7 @@ export async function handleRequest(req, res, prefix = '') {
 function handle(req, res) {
   const url = (req.url || '/').split('?')[0];
   if (url.startsWith('/img/')) return serveImg(req, res);
+  if (url.startsWith('/assets/')) return serveAsset(req, res);
   if (url === '/' || url === '/index.html') {
     fs.readFile(HTML, (err, buf) => {
       if (err) { res.writeHead(500, { 'Content-Type': 'text/plain; charset=utf-8' }).end('缺 index.html'); return; }
