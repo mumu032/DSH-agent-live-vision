@@ -643,6 +643,14 @@
   .band{height:34px}
   .drawer{width:100vw}
 }
+.bodybox{margin:10px 0 2px;padding:9px 10px;border-radius:9px;background:rgba(255,255,255,.03)}
+.bodybox .bh{display:flex;justify-content:space-between;align-items:baseline;font-size:11px;color:var(--dim2);margin-bottom:7px}
+.bodybox .bh b{color:#cfe0f5;font-weight:500}
+.bodybox .gauge{display:flex;align-items:center;gap:8px;margin-top:5px;font-size:11px;color:#8b9bb4}
+.bodybox .gl{width:44px;flex:0 0 auto}
+.bodybox .gt{flex:1 1 auto;height:4px;border-radius:99px;background:rgba(255,255,255,.07);overflow:hidden}
+.bodybox .gt i{display:block;height:100%;border-radius:99px;transition:width .5s}
+.bodybox .gv{width:36px;text-align:right;color:#9fb0c8}
 </style>
 <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Ccircle cx='16' cy='16' r='13' fill='none' stroke='%2338bdf8' stroke-width='2'/%3E%3Ccircle cx='16' cy='16' r='4' fill='%2338bdf8'/%3E%3C/svg%3E">
 </head>
@@ -2144,10 +2152,30 @@ function renderHealth(){
     '<b style="color:' + c + '">' + (h.failed ? pct + '% 失败' : '一切正常') + '</b>' +
     '<span style="color:var(--dim2)">今天 ' + h.total + ' 条事件 · ' + h.failed + ' 条失败</span></div>';
   const bar = '<div class="bar"><i style="width:' + Math.min(100, Math.max(2, pct)) + '%"></i></div>';
+  // 她的身体：把桥接写的 state/body.json 变成三条小刻度，跟失败率放一起看
+  const bd = meta.body || null;
+  let bodyHtml = '';
+  if (bd) {
+    const gauge = (label, v, color) => {
+      const p = Math.max(0, Math.min(1, Number(v) || 0));
+      return '<div class="gauge"><span class="gl">' + label + '</span>' +
+        '<span class="gt"><i style="width:' + Math.round(10 + p * 90) + '%;background:' + color + '"></i></span>' +
+        '<span class="gv mono">' + Math.round(p * 100) + '%</span></div>';
+    };
+    const where = bd.activity && bd.activity.label ? bd.activity.label : '醒着';
+    const nx = bd.next && bd.next.inMin != null ? ' · ' + dur(Number(bd.next.inMin) * 60000) + '后' + bd.next.label : '';
+    const debt = Number(bd.sleepDebt) || 0;
+    bodyHtml = '<div class="bodybox">' +
+      '<div class="bh"><span>她现在的身体</span><b>' + esc(where) + nx + '</b></div>' +
+      gauge('体力', bd.energy, '#34d399') +
+      gauge('饿', Math.min(0.95, bd.hungry), '#f59e0b') +
+      gauge('睡眠债', Math.min(1, debt / 1.5), '#818cf8') +
+      '</div>';
+  }
   const errs = (h.recent || []).map(r =>
     '<div class="r" data-id="' + r.id + '"><span class="tm mono">' + hm(r.t) + '</span>' +
     '<span class="tx">' + esc(r.action + (r.detail ? ' · ' + r.detail : '')) + '</span></div>').join('');
-  box.innerHTML = head + bar + (errs ? '<div class="er">' + errs + '</div>' : '<div class="none">最近没有失败记录。</div>');
+  box.innerHTML = head + bar + bodyHtml + (errs ? '<div class="er">' + errs + '</div>' : '<div class="none">最近没有失败记录。</div>');
   for(const el of box.querySelectorAll('.r')){
     el.onclick = () => { const e = S.events.find(x => String(x.id) === el.dataset.id); if(e) openDrawer(e); };
   }
