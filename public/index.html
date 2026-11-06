@@ -556,6 +556,24 @@
 .sp-flow div:last-child{color:#7dd3fc;opacity:1}
 @media (max-width: 1100px){ .sp-rail{display:none} }
 
+/* 左上 / 右上角标 */
+.sp-tag-tl,.sp-tag-tr{position:absolute;top:30px;font-family:var(--mono,"JetBrains Mono",Consolas,monospace);
+  font-size:10px;letter-spacing:.16em;color:#4f7898;opacity:0;animation:sp-in .8s .35s forwards}
+.sp-tag-tl{left:clamp(18px,4.5vw,72px)}
+.sp-tag-tr{right:clamp(18px,4.5vw,72px);text-align:right}
+.sp-tl1{color:#6f9dc4}.sp-tl1 b{color:#9fd0ee;font-weight:400;margin-left:6px}
+.sp-tl2{margin-top:5px;color:#7dd3fc;font-size:15px;letter-spacing:.1em}
+.sp-tr1{color:#6f9dc4}
+.sp-signal{display:flex;gap:3px;justify-content:flex-end;margin-top:7px}
+.sp-signal i{width:4px;background:rgba(56,189,248,.25);align-self:flex-end;height:6px}
+.sp-signal i:nth-child(2){height:9px}.sp-signal i:nth-child(3){height:12px}
+.sp-signal i:nth-child(4){height:15px}.sp-signal i:nth-child(5){height:18px}
+.sp-signal i{animation:sp-sig 1.4s ease-in-out infinite;animation-delay:calc(var(--i,0)*.12s)}
+.sp-signal i:nth-child(1){--i:0;animation-delay:0s}.sp-signal i:nth-child(2){--i:1;animation-delay:.12s}
+.sp-signal i:nth-child(3){--i:2;animation-delay:.24s}.sp-signal i:nth-child(4){--i:3;animation-delay:.36s}
+.sp-signal i:nth-child(5){--i:4;animation-delay:.48s}
+@keyframes sp-sig{0%,100%{background:rgba(56,189,248,.22)}50%{background:#38bdf8;box-shadow:0 0 8px rgba(56,189,248,.7)}}
+
 /* 中央文字层 */
 .sp-panel{position:absolute;left:50%;top:64%;transform:translate(-50%,0);
   display:flex;flex-direction:column;align-items:center;width:min(460px,84vw);
@@ -705,6 +723,16 @@
     <div class="sp-rrow"><span>通道</span><b>SSE · LOCAL</b></div>
     <div class="sp-rrow"><span>权限</span><b>READ ONLY</b></div>
   </aside>
+  <!-- 左上：身份 + 时间；右上：数据源 + 信号 -->
+  <div class="sp-tag-tl">
+    <div class="sp-tl1">AGENT LIVE <b id="spVer">v0.3.5</b></div>
+    <div class="sp-tl2"><span id="spClock">--:--:--</span></div>
+  </div>
+  <div class="sp-tag-tr">
+    <div class="sp-tr1"><span id="spSrc">LEDGER · READ ONLY</span></div>
+    <div class="sp-signal"><i></i><i></i><i></i><i></i><i></i></div>
+  </div>
+
   <div class="sp-hud">
     <i class="sp-corner tl"></i><i class="sp-corner tr"></i><i class="sp-corner bl"></i><i class="sp-corner br"></i>
   </div>
@@ -1962,6 +1990,17 @@ setInterval(()=>{
     flowTimer = setInterval(push, 160);
   }
   startFlow();
+
+  // 左上时钟 + 右上数据源（贴近当下，不做假数据）
+  const clockEl = document.getElementById('spClock');
+  const srcEl = document.getElementById('spSrc');
+  if (srcEl) srcEl.textContent = (location.port ? 'PORT ' + location.port + ' · READ ONLY' : 'LEDGER · READ ONLY');
+  let clockTimer = null;
+  if (clockEl) {
+    const tickClock = () => { const d = new Date(); clockEl.textContent = [d.getHours(), d.getMinutes(), d.getSeconds()].map((n) => String(n).padStart(2, '0')).join(':'); };
+    tickClock();
+    clockTimer = setInterval(tickClock, 1000);
+  }
   function fillRails(){
     const m = window.__lastMeta; if (!m) return;
     const hr = window.EKG && Number(window.EKG.hr);
@@ -1979,6 +2018,8 @@ setInterval(()=>{
       rail.body.textContent = act + (sat != null ? ' · 饱食 ' + sat + '%' : '');
     }
     if (rail.qq && m.qq) rail.qq.textContent = m.qq.connected === false ? '断线' : '在线';
+    const verEl = document.getElementById('spVer');
+    if (verEl && m.version) verEl.textContent = 'v' + m.version;
   }
 
   const LINES = [
@@ -2042,6 +2083,7 @@ setInterval(()=>{
   function hide(){
     if (done) return;
     if (flowTimer) { clearInterval(flowTimer); flowTimer = null; }
+    if (clockTimer) { clearInterval(clockTimer); clockTimer = null; }
     done = true;
     setProgress(100);
     const wait = Math.max(0, MIN - (performance.now() - t0));

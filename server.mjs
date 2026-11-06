@@ -1063,6 +1063,12 @@ function readBodyState() {
     return b;
   } catch { return null; }
 }
+let PKG_VERSION = '';
+try {
+  const pkg = JSON.parse(fs.readFileSync(path.join(path.dirname(new URL(import.meta.url).pathname.replace(/^\/([A-Za-z]:)/, '$1')), 'package.json'), 'utf8'));
+  PKG_VERSION = String(pkg.version || '');
+} catch {}
+
 function meta() {
   const social = readJsonSafe(F.social) || {};
   const tk = tokensToday();
@@ -1086,6 +1092,7 @@ function meta() {
     todayByPlatform[e.platform] = (todayByPlatform[e.platform] || 0) + 1;
   }
   return {
+    version: PKG_VERSION,
     now: nowMs(),
     paused: !!social.paused,
     platform: PLAT_INFO,
