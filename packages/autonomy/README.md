@@ -10,7 +10,7 @@
 **一行就能看到它在想什么**（不用 clone，不用装依赖）：
 
 ```bash
-npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.2.0.tar.gz agent-autonomy -- --demo --once --now 2026-11-01T14:30:00
+npx --yes --package=https://github.com/mumu032/DSH-agent-live-vision/archive/refs/tags/v0.2.1.tar.gz agent-autonomy -- --demo --once --now 2026-11-01T14:30:00
 # → {"reason":"study","why":"还没自学过",…}
 # → {"reason":"explore","why":"今天第 1/6 次出门",…}
 ```
